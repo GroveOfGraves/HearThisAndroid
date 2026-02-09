@@ -12,9 +12,14 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import android.view.View;
 import android.widget.Button;
@@ -22,12 +27,23 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		EdgeToEdge.enable(this);
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		View mainLayout = findViewById(R.id.main_layout);
+		if (mainLayout != null) {
+			ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
+				Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+				v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+				return insets;
+			});
+		}
+
 		ServiceLocator.getServiceLocator().init(this);
 		Button sync = (Button) findViewById(R.id.mainSyncButton);
 		final MainActivity thisActivity = this; // required to use it in touch handler

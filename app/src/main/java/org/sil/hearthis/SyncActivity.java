@@ -7,8 +7,12 @@ import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import android.util.SparseArray;
 import android.view.Menu;
@@ -52,8 +56,35 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sync);
+
+        View syncLayout = findViewById(R.id.sync_layout);
+        if (syncLayout != null) {
+            // Get original padding from XML to preserve it
+            int paddingLeft = syncLayout.getPaddingLeft();
+            int paddingTop = syncLayout.getPaddingTop();
+            int paddingRight = syncLayout.getPaddingRight();
+            int paddingBottom = syncLayout.getPaddingBottom();
+
+            ViewCompat.setOnApplyWindowInsetsListener(syncLayout, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                
+                // We add the system bar insets to the original XML padding.
+                // Note: On many devices, systemBars.top will include the status bar.
+                // If the Action Bar is still covering text, we might need to account 
+                // for its height specifically or use a NoActionBar theme with a Toolbar.
+                v.setPadding(
+                    paddingLeft + systemBars.left,
+                    paddingTop + systemBars.top,
+                    paddingRight + systemBars.right,
+                    paddingBottom + systemBars.bottom
+                );
+                return insets;
+            });
+        }
+
         getSupportActionBar().setTitle(R.string.sync_title);
         startSyncServer();
         progressView = (TextView) findViewById(R.id.progress);
