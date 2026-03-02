@@ -35,7 +35,9 @@ public class SyncService extends Service {
 
     @Override
     public void onDestroy() {
-        _server.stopThread();
+        if (_server != null) {
+            _server.stopThread();
+        }
         super.onDestroy();
     }
 
@@ -47,13 +49,21 @@ public class SyncService extends Service {
                 .setSmallIcon(R.drawable.ic_launcher)
                 .build();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        } else {
-            startForeground(NOTIFICATION_ID, notification);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            // In Android 14+, the system may occasionally refuse to start a foreground service.
+            // We catch this to prevent a crash, as the SyncServer can often still run.
         }
 
-        _server.startThread();
+        if (_server != null) {
+            _server.startThread();
+        }
+
         return START_STICKY;
     }
 
