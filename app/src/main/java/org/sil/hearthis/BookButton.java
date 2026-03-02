@@ -21,6 +21,10 @@ public class BookButton  extends ProgressButton {
 
     @Override
     protected int getForeColor() {
+        // Added null check for Model to prevent NullPointerException during rendering in IDE.
+        if (Model == null) {
+            return super.getForeColor();
+        }
         if (Model.getScriptProvider().GetTranslatedLineCount(Model.BookNumber) == 0)
             return R.color.navButtonUntranslatedColor;
         if (Model.BookNumber < 5) {
@@ -57,12 +61,20 @@ public class BookButton  extends ProgressButton {
 
     @Override
     protected double getExtraWidth() {
+        // Added null check for Model to prevent NullPointerException during rendering in IDE.
+        if (Model == null) {
+            return 0;
+        }
         int kMaxChapters = 150;//psalms
         return ((double)Model.ChapterCount / kMaxChapters) * 150.0;
     }
 
     @Override
     protected boolean isAllRecorded() {
+        // Added null check for Model to prevent NullPointerException during rendering in IDE.
+        if (Model == null) {
+            return false;
+        }
         BookInfo book = this.Model;
         IScriptProvider provider = book.getScriptProvider();
         int transLines = provider.GetTranslatedLineCount(book.BookNumber);
@@ -72,6 +84,10 @@ public class BookButton  extends ProgressButton {
 
     @Override
     protected String getLabel() {
+        // Added null check for Model and Abbr to prevent NullPointerException during rendering in IDE.
+        if (Model == null || Model.Abbr == null || Model.Abbr.length() == 0) {
+            return "";
+        }
         char first = Model.Abbr.charAt(0);
         String abbr = Model.Abbr;
         if (first >= '0' && first <= '9') {

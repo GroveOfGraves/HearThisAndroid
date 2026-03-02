@@ -13,6 +13,12 @@
         -->
     </style>
 
+    <style name="Theme.AudioRecorder" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- The system will now handle these automatically in API 36 -->
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
     <!-- Application theme. -->
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
