@@ -464,7 +464,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			// Press not long enough; treat as failure.
 			new AlertDialog.Builder(this)
 					//.setTitle("Too short!")
-					.setMessage("Hold down the record button while talking, and only let it go when you're done.")
+					.setMessage(R.string.record_too_short)
 					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int which) {
 							// nothing to do

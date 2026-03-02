@@ -5,7 +5,13 @@ import Script.BookInfo;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,8 +20,19 @@ import android.widget.TextView;
 public class ChooseChapterActivity extends AppCompatActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		EdgeToEdge.enable(this);
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_chapters);
+
+		View mainLayout = findViewById(R.id.chapsFlow);
+		if (mainLayout != null) {
+			ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
+				Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+				v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+				return insets;
+			});
+		}
+
 		getSupportActionBar().setTitle(R.string.choose_chapter);
 		ServiceLocator.getServiceLocator().init(this);
 		Intent intent = getIntent();
