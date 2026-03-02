@@ -3,16 +3,19 @@ package org.sil.hearthis;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
 // Service that runs a simple 'web server' that HearThis desktop can talk to.
 public class SyncService extends Service {
+    private static final String TAG = "SyncService";
     private static final String CHANNEL_ID = "SyncServiceChannel";
     private static final int NOTIFICATION_ID = 1;
 
@@ -35,26 +38,46 @@ public class SyncService extends Service {
 
     @Override
     public void onDestroy() {
-        _server.stopThread();
+        if (_server != null) {
+            _server.stopThread();
+        }
         super.onDestroy();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Intent notificationIntent = new Intent(this, SyncActivity.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        
+        int pendingIntentFlags = PendingIntent.FLAG_IMMUTABLE;
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags);
+
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(getString(R.string.sync_title))
                 .setContentText(getString(R.string.sync_message))
                 .setSmallIcon(R.drawable.ic_launcher)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
                 .build();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
-        } else {
-            startForeground(NOTIFICATION_ID, notification);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+        } catch (Exception e) {
+            // In Android 14+, the system may occasionally refuse to start a foreground service
+            // if the app is not in a state where it can start one (e.g. background).
+            Log.e(TAG, "Failed to start foreground service", e);
+            // We don't crash, but the service won't have foreground priority.
         }
 
-        _server.startThread();
-        return START_STICKY;
+        if (_server != null) {
+            _server.startThread();
+        }
+
+        return START_NOT_STICKY; // Use NOT_STICKY as this service is tied to an active sync session
     }
 
     private void createNotificationChannel() {

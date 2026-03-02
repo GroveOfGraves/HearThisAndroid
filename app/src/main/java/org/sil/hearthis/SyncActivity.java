@@ -2,14 +2,19 @@ package org.sil.hearthis;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -34,6 +39,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Enumeration;
 
@@ -48,6 +54,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     SurfaceView preview;
     int desktopPort = 11007; // port on which the desktop is listening for our IP address.
     private static final int REQUEST_CAMERA_PERMISSION = 201;
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 202;
     boolean scanning = false;
     TextView progressView;
 
@@ -85,11 +92,13 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             });
         }
 
-        getSupportActionBar().setTitle(R.string.sync_title);
-        startSyncServer();
-        progressView = (TextView) findViewById(R.id.progress);
-        continueButton = (Button) findViewById(R.id.continue_button);
-        preview = (SurfaceView) findViewById(R.id.surface_view);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(R.string.sync_title);
+        }
+        requestNotificationPermissionAndStartSync();
+        progressView = findViewById(R.id.progress);
+        continueButton = findViewById(R.id.continue_button);
+        preview = findViewById(R.id.surface_view);
         preview.setVisibility(View.INVISIBLE);
         continueButton.setEnabled(false);
         final SyncActivity thisActivity = this;
@@ -101,9 +110,46 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         });
     }
 
+    private void requestNotificationPermissionAndStartSync() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
+                    new AlertDialog.Builder(this)
+                            .setTitle(R.string.need_permissions)
+                            .setMessage(R.string.notification_for_sync)
+                            .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    ActivityCompat.requestPermissions(SyncActivity.this,
+                                            new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                                            REQUEST_NOTIFICATION_PERMISSION);
+                                }
+                            })
+                            .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // User denied, start anyway and hope for the best (or service might not show notification)
+                                    startSyncServer();
+                                }
+                            })
+                            .create().show();
+                } else {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                }
+                return;
+            }
+        }
+        startSyncServer();
+    }
+
     private void startSyncServer() {
         Intent serviceIntent = new Intent(this, SyncService.class);
         startService(serviceIntent);
+    }
+
+    private void stopSyncServer() {
+        Intent serviceIntent = new Intent(this, SyncService.class);
+        stopService(serviceIntent);
     }
 
     @Override
@@ -123,11 +169,19 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (isFinishing()) {
+            stopSyncServer();
+        }
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_sync, menu);
-        ipView = (TextView) findViewById(R.id.ip_address);
-        scanBtn = (Button) findViewById(R.id.scan_button);
+        ipView = findViewById(R.id.ip_address);
+        scanBtn = findViewById(R.id.scan_button);
         scanBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -157,7 +211,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                     }
 
                     @Override
-                    public void receiveDetections(Detector.Detections<Barcode> detections) {
+                    public void receiveDetections(@NonNull Detector.Detections<Barcode> detections) {
                         final SparseArray<Barcode> barcodes = detections.getDetectedItems();
                         if (scanning && barcodes.size() != 0) {
                             String contents = barcodes.valueAt(0).displayValue;
@@ -178,6 +232,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                                                       preview.setVisibility(View.INVISIBLE);
                                                       SendMessage sendMessageTask = new SendMessage();
                                                       sendMessageTask.ourIpAddress = getOurIpAddress();
+                                                      sendMessageTask.desktopIpAddress = contents;
                                                       sendMessageTask.execute();
                                                       cameraSource.stop();
                                                       cameraSource.release();
@@ -205,7 +260,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             }
         });
         String ourIpAddress = getOurIpAddress();
-        TextView ourIpView = (TextView) findViewById(R.id.our_ip_address);
+        TextView ourIpView = findViewById(R.id.our_ip_address);
         ourIpView.setText(ourIpAddress);
         AcceptNotificationHandler.addNotificationListener(this);
         return true;
@@ -215,8 +270,9 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     @Override
     public void onRequestPermissionsResult(
             int requestCode,
-            String permissions[],
-            int[] grantResults) {
+            @NonNull String[] permissions,
+            @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case REQUEST_CAMERA_PERMISSION:
                 if (grantResults.length > 0) {
@@ -230,6 +286,12 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                         }
                     }
                 }
+                break;
+            case REQUEST_NOTIFICATION_PERMISSION:
+                // Regardless of the result, start the service.
+                // If denied, the user just won't see the notification.
+                startSyncServer();
+                break;
         }
     }
 
@@ -303,17 +365,17 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     // This class is responsible to send one message packet to the IP address we
     // obtained from the desktop, containing the Android's own IP address.
-    private class SendMessage extends AsyncTask<Void, Void, Void> {
+    private static class SendMessage extends AsyncTask<Void, Void, Void> {
 
         public String ourIpAddress;
+        public String desktopIpAddress;
+
         @Override
         protected Void doInBackground(Void... params) {
-            try {
-                String ipAddress = ipView.getText().toString();
-                InetAddress receiverAddress = InetAddress.getByName(ipAddress);
-                DatagramSocket socket = new DatagramSocket();
-                byte[] buffer = ourIpAddress.getBytes("UTF-8");
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, desktopPort);
+            try (DatagramSocket socket = new DatagramSocket()) {
+                InetAddress receiverAddress = InetAddress.getByName(desktopIpAddress);
+                byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
                 socket.send(packet);
             } catch (UnknownHostException e) {
                 e.printStackTrace();

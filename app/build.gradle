@@ -43,3 +43,55 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
 }
+
+/**
+ * Portable task to setup ADB tunnels for emulator syncing.
+ */
+tasks.register('setupSyncTunnels') {
+    group = 'sync'
+    description = 'Setup ADB port forwarding and reverse tunneling for emulator syncing'
+
+    doLast {
+        Properties properties = new Properties()
+        def localPropertiesFile = project.rootProject.file('local.properties')
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withInputStream { properties.load(it) }
+        }
+        
+        def sdkDir = properties.getProperty('sdk.dir')
+        def adb = "adb"
+        if (sdkDir) {
+            adb = "${sdkDir}/platform-tools/adb"
+            if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+                adb += ".exe"
+            }
+        }
+
+        println "Setting up ADB tunnels using: ${adb}"
+
+        def runAdb = { List<String> args ->
+            def fullArgs = [adb] + args
+            def process = fullArgs.execute()
+            def out = new StringBuilder()
+            def err = new StringBuilder()
+            process.consumeProcessOutput(out, err)
+            process.waitFor()
+            if (out) println "ADB Out: ${out.toString().trim()}"
+            if (err) println "ADB Err: ${err.toString().trim()}"
+            return process.exitValue()
+        }
+
+        // Desktop -> Emulator (Syncing data)
+        runAdb(['forward', 'tcp:8087', 'tcp:8087'])
+        // Emulator -> Desktop (QR code "Hello" notification)
+        runAdb(['reverse', 'tcp:11007', 'tcp:11007'])
+        
+        println "Current ADB forwards:"
+        runAdb(['forward', '--list'])
+    }
+}
+
+// Automatically run the setupSyncTunnels task before every build.
+tasks.named("preBuild") {
+    dependsOn("setupSyncTunnels")
+}
