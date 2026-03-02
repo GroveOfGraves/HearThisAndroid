@@ -147,6 +147,11 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         startService(serviceIntent);
     }
 
+    private void stopSyncServer() {
+        Intent serviceIntent = new Intent(this, SyncService.class);
+        stopService(serviceIntent);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -160,6 +165,14 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         if (cameraSource != null) {
             cameraSource.release();
             cameraSource = null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (isFinishing()) {
+            stopSyncServer();
         }
     }
 
