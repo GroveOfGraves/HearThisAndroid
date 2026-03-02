@@ -24,7 +24,7 @@ public class ChooseChapterActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_chapters);
 
-		View mainLayout = findViewById(R.id.chapsFlow);
+		View mainLayout = findViewById(R.id.main);
 		if (mainLayout != null) {
 			ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
 				Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
