@@ -23,6 +23,8 @@ import android.media.MediaRecorder.AudioEncoder;
 import android.media.MediaRecorder.AudioSource;
 import android.media.MediaRecorder.OutputFormat;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -367,7 +369,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		recorder.setAudioEncodingBitRate(44100);
 		File file = new File(_recordingFilePath);
 		File dir = file.getParentFile();
-		if (!dir.exists())
+        if (!dir.exists())
 			dir.mkdirs();
 		recorder.setOutputFile(file.getAbsolutePath());
 		try {
@@ -414,20 +416,20 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	@Override
 	public void onRequestPermissionsResult(
 			int requestCode,
-			String permissions[],
-			int[] grantResults) {
-		switch (requestCode) {
-			case RECORD_ACTIVITY_RECORD_PERMISSION:
-				if (grantResults.length > 0) {
+			@NonNull String[] permissions,
+			@NonNull int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		if (requestCode == RECORD_ACTIVITY_RECORD_PERMISSION) {
+			if (grantResults.length > 0) {
 					// We seem to get spurious callbacks with no results at all, before the user
 					// even responds. This might be because multiple events on the record button
 					// result in multiple requests. So just ignore any callback with no results.
-					if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-						// The user denied permission to record audio. We can't do much useful.
-						// This toast just might help.
-						Toast.makeText(this, R.string.no_use_without_record, Toast.LENGTH_LONG).show();
-					}
+				if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+					// The user denied permission to record audio. We can't do much useful.
+					// This toast just might help.
+					Toast.makeText(this, R.string.no_use_without_record, Toast.LENGTH_LONG).show();
 				}
+			}
 		}
 	}
 
@@ -464,7 +466,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			// Press not long enough; treat as failure.
 			new AlertDialog.Builder(this)
 					//.setTitle("Too short!")
-					.setMessage("Hold down the record button while talking, and only let it go when you're done.")
+					.setMessage(R.string.record_too_short)
 					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int which) {
 							// nothing to do

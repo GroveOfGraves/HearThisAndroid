@@ -255,25 +255,10 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         } catch (SocketException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-            ip += "Something Wrong! " + e.toString() + "\n";
+            ip = getString(R.string.ip_error, e.toString());
         }
 
         return ip;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -297,7 +282,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     }
 
     Date lastProgress = new Date();
-    boolean stopUpdatingProgress = false;
 
     @Override
     public void receivingFile(final String name) {
@@ -306,7 +290,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         if (new Date().getTime() - lastProgress.getTime() < 1000)
             return;
         lastProgress = new Date();
-        setProgress("receiving " + name);
+        setProgress(getString(R.string.receiving_file, name));
     }
 
     @Override
@@ -314,7 +298,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         if (new Date().getTime() - lastProgress.getTime() < 1000)
             return;
         lastProgress = new Date();
-        setProgress("sending " + name);
+        setProgress(getString(R.string.sending_file, name));
     }
 
     // This class is responsible to send one message packet to the IP address we

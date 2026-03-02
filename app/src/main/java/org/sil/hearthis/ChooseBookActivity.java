@@ -3,7 +3,13 @@ package org.sil.hearthis;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,8 +25,19 @@ public class ChooseBookActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_choose_book);
+
+        View mainLayout = findViewById(R.id.booksFlow);
+        if (mainLayout != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+                return insets;
+            });
+        }
+
         IScriptProvider scripture = ServiceLocator.getServiceLocator().init(this).getScriptProvider();
         Project project = new Project("Sample", scripture);
         getSupportActionBar().setTitle(R.string.choose_book);
