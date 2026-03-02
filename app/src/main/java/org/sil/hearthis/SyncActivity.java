@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -38,6 +39,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Enumeration;
 
@@ -90,11 +92,13 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             });
         }
 
-        getSupportActionBar().setTitle(R.string.sync_title);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(R.string.sync_title);
+        }
         requestNotificationPermissionAndStartSync();
-        progressView = (TextView) findViewById(R.id.progress);
-        continueButton = (Button) findViewById(R.id.continue_button);
-        preview = (SurfaceView) findViewById(R.id.surface_view);
+        progressView = findViewById(R.id.progress);
+        continueButton = findViewById(R.id.continue_button);
+        preview = findViewById(R.id.surface_view);
         preview.setVisibility(View.INVISIBLE);
         continueButton.setEnabled(false);
         final SyncActivity thisActivity = this;
@@ -163,8 +167,8 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_sync, menu);
-        ipView = (TextView) findViewById(R.id.ip_address);
-        scanBtn = (Button) findViewById(R.id.scan_button);
+        ipView = findViewById(R.id.ip_address);
+        scanBtn = findViewById(R.id.scan_button);
         scanBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -194,7 +198,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                     }
 
                     @Override
-                    public void receiveDetections(Detector.Detections<Barcode> detections) {
+                    public void receiveDetections(@NonNull Detector.Detections<Barcode> detections) {
                         final SparseArray<Barcode> barcodes = detections.getDetectedItems();
                         if (scanning && barcodes.size() != 0) {
                             String contents = barcodes.valueAt(0).displayValue;
@@ -215,6 +219,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                                                       preview.setVisibility(View.INVISIBLE);
                                                       SendMessage sendMessageTask = new SendMessage();
                                                       sendMessageTask.ourIpAddress = getOurIpAddress();
+                                                      sendMessageTask.desktopIpAddress = contents;
                                                       sendMessageTask.execute();
                                                       cameraSource.stop();
                                                       cameraSource.release();
@@ -242,7 +247,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             }
         });
         String ourIpAddress = getOurIpAddress();
-        TextView ourIpView = (TextView) findViewById(R.id.our_ip_address);
+        TextView ourIpView = findViewById(R.id.our_ip_address);
         ourIpView.setText(ourIpAddress);
         AcceptNotificationHandler.addNotificationListener(this);
         return true;
@@ -252,8 +257,9 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     @Override
     public void onRequestPermissionsResult(
             int requestCode,
-            String permissions[],
-            int[] grantResults) {
+            @NonNull String[] permissions,
+            @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case REQUEST_CAMERA_PERMISSION:
                 if (grantResults.length > 0) {
@@ -346,17 +352,17 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     // This class is responsible to send one message packet to the IP address we
     // obtained from the desktop, containing the Android's own IP address.
-    private class SendMessage extends AsyncTask<Void, Void, Void> {
+    private static class SendMessage extends AsyncTask<Void, Void, Void> {
 
         public String ourIpAddress;
+        public String desktopIpAddress;
+
         @Override
         protected Void doInBackground(Void... params) {
-            try {
-                String ipAddress = ipView.getText().toString();
-                InetAddress receiverAddress = InetAddress.getByName(ipAddress);
-                DatagramSocket socket = new DatagramSocket();
-                byte[] buffer = ourIpAddress.getBytes("UTF-8");
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, desktopPort);
+            try (DatagramSocket socket = new DatagramSocket()) {
+                InetAddress receiverAddress = InetAddress.getByName(desktopIpAddress);
+                byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
                 socket.send(packet);
             } catch (UnknownHostException e) {
                 e.printStackTrace();
