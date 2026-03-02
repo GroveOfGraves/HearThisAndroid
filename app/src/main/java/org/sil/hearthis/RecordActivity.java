@@ -22,10 +22,18 @@ import android.media.MediaRecorder;
 import android.media.MediaRecorder.AudioEncoder;
 import android.media.MediaRecorder.AudioSource;
 import android.media.MediaRecorder.OutputFormat;
+import android.os.Build;
 import android.os.Bundle;
+
+
+import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -35,6 +43,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -73,8 +82,38 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		EdgeToEdge.enable(this);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+			getWindow().getAttributes().layoutInDisplayCutoutMode =
+					WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+		}
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_record);
+
+		// Find the root layout and the level row
+		View root = findViewById(R.id.recordActivityRoot);
+		if (root == null){
+			root = findViewById(android.R.id.content);
+		}
+
+		// Apply Window Insets
+		ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+			Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+
+			// Apply TOP padding to the root (so the title bar isn't hidden by the status bar)
+			v.setPadding(insets.left, insets.top, insets.right, 0);
+
+			// Apply BOTTOM padding specifically to the ScrollView parent of _linesView
+			// This allows the text to scroll behind the navigation bar but stay accessible.
+			if (_linesView != null && _linesView.getParent() instanceof ScrollView) {
+				ScrollView scrollView = (ScrollView) _linesView.getParent();
+				scrollView.setPadding(0, 0, 0, insets.bottom);
+				scrollView.setClipToPadding(false);
+			}
+
+			return windowInsets;
+		});
+
 		getSupportActionBar().setTitle(R.string.record_title);
 		// Usually not necessary, since we don't start up in this activity. But if the user turns
 		// off our permission to record and then resumes the app (something probably only a tester
@@ -367,7 +406,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		recorder.setAudioEncodingBitRate(44100);
 		File file = new File(_recordingFilePath);
 		File dir = file.getParentFile();
-		if (!dir.exists())
+        if (!dir.exists())
 			dir.mkdirs();
 		recorder.setOutputFile(file.getAbsolutePath());
 		try {
@@ -414,20 +453,20 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	@Override
 	public void onRequestPermissionsResult(
 			int requestCode,
-			String permissions[],
-			int[] grantResults) {
-		switch (requestCode) {
-			case RECORD_ACTIVITY_RECORD_PERMISSION:
-				if (grantResults.length > 0) {
+			@NonNull String[] permissions,
+			@NonNull int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		if (requestCode == RECORD_ACTIVITY_RECORD_PERMISSION) {
+			if (grantResults.length > 0) {
 					// We seem to get spurious callbacks with no results at all, before the user
 					// even responds. This might be because multiple events on the record button
 					// result in multiple requests. So just ignore any callback with no results.
-					if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-						// The user denied permission to record audio. We can't do much useful.
-						// This toast just might help.
-						Toast.makeText(this, R.string.no_use_without_record, Toast.LENGTH_LONG).show();
-					}
+				if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+					// The user denied permission to record audio. We can't do much useful.
+					// This toast just might help.
+					Toast.makeText(this, R.string.no_use_without_record, Toast.LENGTH_LONG).show();
 				}
+			}
 		}
 	}
 
@@ -464,7 +503,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			// Press not long enough; treat as failure.
 			new AlertDialog.Builder(this)
 					//.setTitle("Too short!")
-					.setMessage("Hold down the record button while talking, and only let it go when you're done.")
+					.setMessage(R.string.record_too_short)
 					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int which) {
 							// nothing to do
