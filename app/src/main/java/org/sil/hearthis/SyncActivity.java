@@ -2,14 +2,18 @@ package org.sil.hearthis;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -48,6 +52,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     SurfaceView preview;
     int desktopPort = 11007; // port on which the desktop is listening for our IP address.
     private static final int REQUEST_CAMERA_PERMISSION = 201;
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 202;
     boolean scanning = false;
     TextView progressView;
 
@@ -86,7 +91,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         }
 
         getSupportActionBar().setTitle(R.string.sync_title);
-        startSyncServer();
+        requestNotificationPermissionAndStartSync();
         progressView = (TextView) findViewById(R.id.progress);
         continueButton = (Button) findViewById(R.id.continue_button);
         preview = (SurfaceView) findViewById(R.id.surface_view);
@@ -99,6 +104,38 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 thisActivity.finish();
             }
         });
+    }
+
+    private void requestNotificationPermissionAndStartSync() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
+                    new AlertDialog.Builder(this)
+                            .setTitle(R.string.need_permissions)
+                            .setMessage(R.string.notification_for_sync)
+                            .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    ActivityCompat.requestPermissions(SyncActivity.this,
+                                            new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                                            REQUEST_NOTIFICATION_PERMISSION);
+                                }
+                            })
+                            .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    // User denied, start anyway and hope for the best (or service might not show notification)
+                                    startSyncServer();
+                                }
+                            })
+                            .create().show();
+                } else {
+                    ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
+                }
+                return;
+            }
+        }
+        startSyncServer();
     }
 
     private void startSyncServer() {
@@ -230,6 +267,12 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                         }
                     }
                 }
+                break;
+            case REQUEST_NOTIFICATION_PERMISSION:
+                // Regardless of the result, start the service.
+                // If denied, the user just won't see the notification.
+                startSyncServer();
+                break;
         }
     }
 
