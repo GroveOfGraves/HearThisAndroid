@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/recordActivityRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/mainBackground" >
@@ -21,6 +22,7 @@
                 android:id="@+id/textScrollView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:clipToPadding="false"
                 android:background="@color/mainBackground" >
                 <LinearLayout
                     android:id="@+id/textLineHolder"
@@ -42,7 +44,7 @@
 
         <view class="org.sil.hearthis.PlayButton"
             android:id="@+id/playButton"
-            android:layout_marginLeft="10dp"
+            android:layout_marginStart="10dp"
             android:layout_width="10dp"
             android:layout_height="100dp"
             android:layout_weight="1"
@@ -70,7 +72,8 @@
     <TableRow
         android:id="@+id/levelRow"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:paddingBottom="16dp">
         <!-- the weird combination of width 0 and weight 1 makes it take up the whole width,
         while width match_parent doesn't work in table row-->
         <org.sil.hearthis.LevelMeterView

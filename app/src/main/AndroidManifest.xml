@@ -58,6 +58,8 @@
         <activity android:name=".ChooseProjectActivity"></activity>
 
         <uses-library android:name="org.apache.http.legacy" android:required="false"/>
+
+
     </application>
 
 </manifest>
