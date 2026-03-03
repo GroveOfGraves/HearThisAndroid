@@ -39,19 +39,19 @@ public class PlayButton extends CustomButton {
     @Override
     public void onDraw(Canvas canvas) {
         //super.onDraw(canvas);
-        int right = this.getRight();
-        int left = this.getLeft();
-        int bottom = this.getBottom();
-        int top = this.getTop();
+        int w = getWidth();
+        int h = getHeight();
         float moveWhenPushed = 1.0f;
         float inset = 1; // a margin to prevent clipping the shape
-        float size = Math.min(right - left, bottom - top) - moveWhenPushed - inset;
-        float delta = inset + (getButtonState() == BtnState.Pushed || getPlaying() ? moveWhenPushed  : 0f);
+        float size = Math.min(w, h) - moveWhenPushed - inset;
+        float deltaX = (w - size) / 2f + (getButtonState() == BtnState.Pushed || getPlaying() ? moveWhenPushed : 0f);
+        float deltaY = (h - size) / 2f + (getButtonState() == BtnState.Pushed || getPlaying() ? moveWhenPushed : 0f);
+
         Path arrow = new Path();
-        arrow.moveTo(delta, delta);
-        arrow.lineTo(delta, (float) size + delta);
-        arrow.lineTo((float) size, size / 2 + delta);
-        arrow.lineTo(delta,delta);
+        arrow.moveTo(deltaX, deltaY);
+        arrow.lineTo(deltaX, (float) size + deltaY);
+        arrow.lineTo((float) size + deltaX, size / 2 + deltaY);
+        arrow.lineTo(deltaX, deltaY);
         if (getPlaying()) {
             canvas.drawPath(arrow, blueFillPaint);
             canvas.drawPath(arrow, playBorderPaint);
