@@ -102,3 +102,8 @@ tasks.register('setupSyncTunnels') {
 tasks.named("preBuild") {
     dependsOn("setupSyncTunnels")
 }
+
+// Add this at the bottom of the file
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << "-Xlint:deprecation"
+}

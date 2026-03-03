@@ -3,6 +3,7 @@ package org.sil.hearthis;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.Objects;
 
 import Script.BibleLocation;
 import Script.BookInfo;
@@ -15,6 +16,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -32,6 +34,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
+import androidx.core.os.BundleCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
@@ -114,7 +117,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			return windowInsets;
 		});
 
-		getSupportActionBar().setTitle(R.string.record_title);
+		Objects.requireNonNull(getSupportActionBar()).setTitle(R.string.record_title);
 		// Usually not necessary, since we don't start up in this activity. But if the user turns
 		// off our permission to record and then resumes the app (something probably only a tester
 		// would do, but still...) the system apparently re-creates the activity without going
@@ -123,7 +126,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
-		BookInfo book = (BookInfo) extras.get("bookInfo");
+		BookInfo book = BundleCompat.getParcelable(extras, "bookInfo", BookInfo.class);
 		if (book != null) {
 			// invoked from chapter page
 			_chapNum = extras.getInt("chapter");
@@ -175,6 +178,9 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 			@Override
 			public boolean onTouch(View v, MotionEvent e) {
+				if (e.getAction() == MotionEvent.ACTION_DOWN){
+					v.performClick();
+				}
 				recordButtonTouch(e);
 				return true; // we handle all touch events on this button.
 			}
@@ -245,15 +251,15 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 	void setTextColor(int lineNo) {
 		TextView lineView = (TextView) _linesView.getChildAt(lineNo);
-		int lineColor = getResources().getColor(R.color.contextTextLine);
+		int lineColor = ContextCompat.getColor(this, R.color.contextTextLine);
 		if (lineNo == _activeLine) {
-			lineColor = getResources().getColor(R.color.activeTextLine);
+			lineColor = ContextCompat.getColor(this, R.color.activeTextLine);
 		} else {
 			String recordingFilePath = _provider.getRecordingFilePath(_bookNum, _chapNum, lineNo);
 			if (new File(recordingFilePath).exists()) {
-				lineColor = getResources().getColor(R.color.recordedTextLine);
+				lineColor = ContextCompat.getColor(this, R.color.recordedTextLine);
 			} else if (_provider.hasRecording(_bookNum, _chapNum, lineNo)) {
-				lineColor = getResources().getColor(R.color.recordedElsewhereTextLine);
+				lineColor = ContextCompat.getColor(this, R.color.recordedElsewhereTextLine);
 			}
 		}
 		lineView.setTextColor(lineColor);
@@ -390,7 +396,11 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		if (recorder != null) {
 			recorder.release();
 		}
-		recorder = new MediaRecorder();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			recorder = new MediaRecorder(this);
+		} else {
+			recorder = new MediaRecorder();
+		}
 		recorder.setAudioSource(AudioSource.MIC);
 		// Looking for a good combination that produces a usable file.
 		// THREE_GPP/AMR_NB was suggested at http://www.grokkingandroid.com/recording-audio-using-androids-mediarecorder-framework/
@@ -543,7 +553,14 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			
 			File file = new File(_recordingFilePath);
 			playButtonPlayer.setDataSource(file.getAbsolutePath());
-			playButtonPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				playButtonPlayer.setAudioAttributes(new AudioAttributes.Builder()
+						.setUsage(AudioAttributes.USAGE_MEDIA)
+						.setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+						.build());
+			} else {
+				playButtonPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+			}
 			playButtonPlayer.prepare();
 			playButtonPlayer.start();
 		} catch (Exception e) {
