@@ -1,6 +1,8 @@
 package org.sil.hearthis;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
 import android.content.Context;
@@ -81,7 +83,7 @@ public class BookButtonTest {
         BookButton button = new BookButton(mockContext, null);
         button.Model = createBookInfo(0, "gen");
 
-        assertEquals(false, button.isAllRecorded());
+        assertFalse(button.isAllRecorded());
     }
 
     @Test
@@ -92,6 +94,6 @@ public class BookButtonTest {
         BookButton button = new BookButton(mockContext, null);
         button.Model = createBookInfo(0, "gen");
 
-        assertEquals(true, button.isAllRecorded());
+        assertTrue(button.isAllRecorded());
     }
 }
