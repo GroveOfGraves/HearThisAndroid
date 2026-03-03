@@ -29,7 +29,7 @@ public class ChooseBookActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_choose_book);
 
-        View mainLayout = findViewById(R.id.booksFlow);
+        View mainLayout = findViewById(R.id.main);
         if (mainLayout != null) {
             ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
                 Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
