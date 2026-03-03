@@ -43,12 +43,17 @@ dependencies {
     // HTTP Server for syncing
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
 
-    testImplementation 'org.mockito:mockito-core:3.11.2'
+    testImplementation 'org.mockito:mockito-core:4.8.0'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
-    androidTestImplementation 'androidx.test:rules:1.5.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
-    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
+    
+    // Testing dependencies (Updated for Android 16/API 36)
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
+    androidTestImplementation 'org.mockito:mockito-android:4.8.0'
 }
 
 /**
