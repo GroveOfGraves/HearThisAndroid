@@ -13,24 +13,30 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
+import androidx.camera.core.Preview;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import android.util.SparseArray;
+import android.util.Log;
 import android.view.Menu;
-import android.view.MenuItem;
-import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.google.android.gms.vision.CameraSource;
-import com.google.android.gms.vision.Detector;
-import com.google.android.gms.vision.barcode.Barcode;
-import com.google.android.gms.vision.barcode.BarcodeDetector;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.mlkit.vision.barcode.BarcodeScanner;
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
+import com.google.mlkit.vision.barcode.BarcodeScanning;
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.common.InputImage;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -42,24 +48,29 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class SyncActivity extends AppCompatActivity implements AcceptNotificationHandler.NotificationListener,
         AcceptFileHandler.IFileReceivedNotification,
         RequestFileHandler.IFileSentNotification {
 
+    private static final String TAG = "SyncActivity";
     Button scanBtn;
     Button continueButton;
     TextView ipView;
-    SurfaceView preview;
+    PreviewView previewView;
     int desktopPort = 11007; // port on which the desktop is listening for our IP address.
     private static final int REQUEST_CAMERA_PERMISSION = 201;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 202;
     boolean scanning = false;
     TextView progressView;
 
-    private BarcodeDetector barcodeDetector;
-    private CameraSource cameraSource;
+    private ExecutorService cameraExecutor;
+    private BarcodeScanner barcodeScanner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,11 +88,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
             ViewCompat.setOnApplyWindowInsetsListener(syncLayout, (v, insets) -> {
                 Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-                
-                // We add the system bar insets to the original XML padding.
-                // Note: On many devices, systemBars.top will include the status bar.
-                // If the Action Bar is still covering text, we might need to account 
-                // for its height specifically or use a NoActionBar theme with a Toolbar.
                 v.setPadding(
                     paddingLeft + systemBars.left,
                     paddingTop + systemBars.top,
@@ -98,8 +104,8 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         requestNotificationPermissionAndStartSync();
         progressView = findViewById(R.id.progress);
         continueButton = findViewById(R.id.continue_button);
-        preview = findViewById(R.id.surface_view);
-        preview.setVisibility(View.INVISIBLE);
+        previewView = findViewById(R.id.preview_view);
+        previewView.setVisibility(View.INVISIBLE);
         continueButton.setEnabled(false);
         final SyncActivity thisActivity = this;
         continueButton.setOnClickListener(new View.OnClickListener() {
@@ -108,6 +114,12 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 thisActivity.finish();
             }
         });
+
+        cameraExecutor = Executors.newSingleThreadExecutor();
+        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build();
+        barcodeScanner = BarcodeScanning.getClient(options);
     }
 
     private void requestNotificationPermissionAndStartSync() {
@@ -128,7 +140,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                             .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    // User denied, start anyway and hope for the best (or service might not show notification)
                                     startSyncServer();
                                 }
                             })
@@ -160,97 +171,25 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        if (cameraSource != null) {
-            cameraSource.release();
-            cameraSource = null;
-        }
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (isFinishing()) {
             stopSyncServer();
         }
+        cameraExecutor.shutdown();
+        barcodeScanner.close();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_sync, menu);
         ipView = findViewById(R.id.ip_address);
         scanBtn = findViewById(R.id.scan_button);
         scanBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // This approach is deprecated, but the new approach (using ML_Kit)
-                // requires us to increase MinSdk from 18 to 19 (4.4) and barcode scanning is
-                // not important enough for us to do that. This works fine on an app that targets
-                // SDK 33, at least while running on Android 12.
-                barcodeDetector = new BarcodeDetector.Builder(SyncActivity.this)
-                        .setBarcodeFormats(Barcode.QR_CODE)
-                        .build();
-                if (cameraSource != null)
-                {
-                    //cameraSource.stop();
-                    cameraSource.release();
-                    cameraSource = null;
-                }
-
-                cameraSource = new CameraSource.Builder(SyncActivity.this, barcodeDetector)
-                        .setRequestedPreviewSize(1920, 1080)
-                        .setAutoFocusEnabled(true)
-                        .build();
-
-                barcodeDetector.setProcessor(new Detector.Processor<Barcode>() {
-                    @Override
-                    public void release() {
-                        //Toast.makeText(getApplicationContext(), "To prevent memory leaks barcode scanner has been stopped", Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void receiveDetections(@NonNull Detector.Detections<Barcode> detections) {
-                        final SparseArray<Barcode> barcodes = detections.getDetectedItems();
-                        if (scanning && barcodes.size() != 0) {
-                            String contents = barcodes.valueAt(0).displayValue;
-                            scanning = false; // don't want to repeat this if it finds the image again
-                            runOnUiThread(new Runnable() {
-                                              @Override
-                                              public void run() {
-                                                  // Enhance: do something (add a magic number or label?) so we can tell if they somehow scanned
-                                                  // some other QR code. We've reduced the chances by telling the BarCodeDetector to
-                                                  // only look for QR codes, but conceivably the user could find something else.
-                                                  // It's only used for one thing: we will try to use it as an IP address and send
-                                                  // a simple DataGram to it containing our own IP address. So if it's no good,
-                                                  // there'll probably be an exception, and it will be ignored, and nothing will happen
-                                                  // except that whatever text the QR code represents shows on the screen, which might
-                                                  // provide some users a clue that all is not well.
-                                                  ipView.setText(contents);
-                                                  preview.setVisibility(View.INVISIBLE);
-                                                  SendMessage sendMessageTask = new SendMessage();
-                                                  sendMessageTask.ourIpAddress = getOurIpAddress();
-                                                  sendMessageTask.desktopIpAddress = contents;
-                                                  sendMessageTask.execute();
-                                                  cameraSource.stop();
-                                                  cameraSource.release();
-                                                  cameraSource = null;
-                                              }
-                                          });
-
-                        }
-                    }
-                });
-
                 if (ActivityCompat.checkSelfPermission(SyncActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                    try {
-                        scanning = true;
-                        preview.setVisibility(View.VISIBLE);
-                        cameraSource.start(preview.getHolder());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    startCamera();
                 } else {
                     ActivityCompat.requestPermissions(SyncActivity.this, new
                             String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
@@ -264,6 +203,85 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         return true;
     }
 
+    private void startCamera() {
+        scanning = true;
+        previewView.setVisibility(View.VISIBLE);
+
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+
+                Preview preview = new Preview.Builder().build();
+                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+
+                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build();
+
+                imageAnalysis.setAnalyzer(cameraExecutor, new ImageAnalysis.Analyzer() {
+                    @Override
+                    @androidx.annotation.OptIn(markerClass = androidx.camera.core.ExperimentalGetImage.class)
+                    public void analyze(@NonNull ImageProxy imageProxy) {
+                        if (!scanning) {
+                            imageProxy.close();
+                            return;
+                        }
+
+                        @SuppressLint("UnsafeOptInUsageError")
+                        android.media.Image mediaImage = imageProxy.getImage();
+                        if (mediaImage != null) {
+                            InputImage image = InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
+                            barcodeScanner.process(image)
+                                    .addOnSuccessListener(barcodes -> {
+                                        if (scanning && !barcodes.isEmpty()) {
+                                            handleBarcode(barcodes.get(0));
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> Log.e(TAG, "Barcode scanning failed", e))
+                                    .addOnCompleteListener(task -> imageProxy.close());
+                        } else {
+                            imageProxy.close();
+                        }
+                    }
+                });
+
+                CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+
+                cameraProvider.unbindAll();
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+
+            } catch (ExecutionException | InterruptedException e) {
+                Log.e(TAG, "Use case binding failed", e);
+            }
+        }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void handleBarcode(Barcode barcode) {
+        String contents = barcode.getDisplayValue();
+        if (contents == null) return;
+        
+        scanning = false;
+        runOnUiThread(() -> {
+            ipView.setText(contents);
+            previewView.setVisibility(View.INVISIBLE);
+            
+            SendMessage sendMessageTask = new SendMessage();
+            sendMessageTask.ourIpAddress = getOurIpAddress();
+            sendMessageTask.desktopIpAddress = contents;
+            sendMessageTask.execute();
+            
+            ProcessCameraProvider cameraProvider;
+            try {
+                cameraProvider = ProcessCameraProvider.getInstance(this).get();
+                cameraProvider.unbindAll();
+            } catch (ExecutionException | InterruptedException e) {
+                Log.e(TAG, "Failed to unbind camera", e);
+            }
+        });
+    }
+
     @SuppressLint("MissingPermission")
     @Override
     public void onRequestPermissionsResult(
@@ -273,27 +291,16 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case REQUEST_CAMERA_PERMISSION:
-                if (grantResults.length > 0) {
-                    if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                        try {
-                            scanning = true;
-                            preview.setVisibility(View.VISIBLE);
-                            cameraSource.start(preview.getHolder());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startCamera();
                 }
                 break;
             case REQUEST_NOTIFICATION_PERMISSION:
-                // Regardless of the result, start the service.
-                // If denied, the user just won't see the notification.
                 startSyncServer();
                 break;
         }
     }
 
-    // Get the IP address of this device (on the WiFi network) to transmit to the desktop.
     private String getOurIpAddress() {
         String ip = "";
         try {
@@ -303,21 +310,15 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 Enumeration<InetAddress> enumInetAddress = networkInterface.getInetAddresses();
                 while (enumInetAddress.hasMoreElements()) {
                     InetAddress inetAddress = enumInetAddress.nextElement();
-
                     if (inetAddress.isSiteLocalAddress()) {
                         return inetAddress.getHostAddress();
                     }
-
                 }
-
             }
-
         } catch (SocketException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             ip = getString(R.string.ip_error, e.toString());
         }
-
         return ip;
     }
 
@@ -325,28 +326,17 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     public void onNotification(String message) {
         AcceptNotificationHandler.removeNotificationListener(this);
         setProgress(getString(R.string.sync_success));
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                continueButton.setEnabled(true);
-            }
-        });
+        runOnUiThread(() -> continueButton.setEnabled(true));
     }
 
     void setProgress(final String text) {
-        runOnUiThread(new Runnable() {
-            public void run() {
-                progressView.setText(text);
-            }
-        });
+        runOnUiThread(() -> progressView.setText(text));
     }
 
     Date lastProgress = new Date();
 
     @Override
     public void receivingFile(final String name) {
-        // To prevent excess flicker and wasting compute time on progress reports,
-        // only change once per second.
         if (new Date().getTime() - lastProgress.getTime() < 1000)
             return;
         lastProgress = new Date();
@@ -361,10 +351,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         setProgress(getString(R.string.sending_file, name));
     }
 
-    // This class is responsible to send one message packet to the IP address we
-    // obtained from the desktop, containing the Android's own IP address.
     private static class SendMessage extends AsyncTask<Void, Void, Void> {
-
         public String ourIpAddress;
         public String desktopIpAddress;
 
@@ -375,8 +362,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
                 socket.send(packet);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }
