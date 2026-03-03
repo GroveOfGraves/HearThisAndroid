@@ -17,6 +17,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.util.Objects;
+
 public class ChooseChapterActivity extends AppCompatActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -33,14 +35,14 @@ public class ChooseChapterActivity extends AppCompatActivity {
 			});
 		}
 
-		getSupportActionBar().setTitle(R.string.choose_chapter);
+		Objects.requireNonNull(getSupportActionBar()).setTitle(R.string.choose_chapter);
 		ServiceLocator.getServiceLocator().init(this);
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
-		final BookInfo book = (BookInfo)extras.get("bookInfo");
+        final BookInfo book = (BookInfo)extras.get("bookInfo");
 		
 		TextView bookBox = (TextView)findViewById(R.id.bookNameText);
-		bookBox.setText(book.Name);
+        bookBox.setText(book.Name);
 		
 		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 		ViewGroup chapsFlow = (ViewGroup) findViewById(R.id.chapsFlow);

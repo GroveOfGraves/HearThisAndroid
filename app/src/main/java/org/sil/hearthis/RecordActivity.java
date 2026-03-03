@@ -291,7 +291,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			bottomNext = tops[newLine + 2];
 		}
 		if (bottomNext > scrollPos + height) {
-			// Not all of the following line is visible.
+			// Not all the following line is visible.
 			// Initial proposal is to scroll so the bottom of the next line is just visible
 			newScrollPos = bottomNext - height;
 		}
@@ -392,7 +392,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		}
 		recorder = new MediaRecorder();
 		recorder.setAudioSource(AudioSource.MIC);
-		// Looking for a good combination that produces a useable file.
+		// Looking for a good combination that produces a usable file.
 		// THREE_GPP/AMR_NB was suggested at http://www.grokkingandroid.com/recording-audio-using-androids-mediarecorder-framework/
 		// Eclipse complains that AMR_NB not supported in API 8 (requires 10).
 		// http://www.techotopia.com/index.php/Android_Audio_Recording_and_Playback_using_MediaPlayer_and_MediaRecorder
