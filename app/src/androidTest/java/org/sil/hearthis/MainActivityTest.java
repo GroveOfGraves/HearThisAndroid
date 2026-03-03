@@ -1,7 +1,6 @@
 package org.sil.hearthis;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 import android.app.Instrumentation;
 
@@ -9,6 +8,7 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,13 +23,13 @@ import Script.TestFileSystem;
 public class MainActivityTest {
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         // Reset ServiceLocator for each test to ensure a clean state
         ServiceLocator.theOneInstance = new ServiceLocator();
     }
 
     @Test
-    public void createMainActivity_withNoScripture_startsNoOtherActivity() throws Exception {
+    public void createMainActivity_withNoScripture_startsNoOtherActivity() {
         // Simulates no files at all installed
         TestFileSystem fakeFileSystem = new TestFileSystem();
         ServiceLocator.getServiceLocator().externalFilesDirectory = fakeFileSystem.externalFilesDirectory;
@@ -41,9 +41,7 @@ public class MainActivityTest {
                 .addMonitor(RecordActivity.class.getName(), null, false);
 
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(activity -> {
-                assertNotNull(activity);
-            });
+            scenario.onActivity(Assert::assertNotNull);
 
             assertEquals("unexpectedly launched choose book activity", 0, bookChooserMonitor.getHits());
             assertEquals("unexpectedly launched record activity", 0, recordMonitor.getHits());
@@ -51,7 +49,7 @@ public class MainActivityTest {
     }
 
     @Test
-    public void createMainActivity_withScripture_NoSavedLocation_startsChooseBook() throws Exception {
+    public void createMainActivity_withScripture_NoSavedLocation_startsChooseBook() {
         // Simulates a minimal single scripture instance installed.
         TestFileSystem fakeFileSystem = new TestFileSystem();
         fakeFileSystem.project = "kal";
@@ -69,9 +67,7 @@ public class MainActivityTest {
                 .addMonitor(RecordActivity.class.getName(), null, false);
 
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(activity -> {
-                assertNotNull(activity);
-            });
+            scenario.onActivity(Assert::assertNotNull);
 
             // The activity might take a moment to launch the next one
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
