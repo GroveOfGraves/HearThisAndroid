@@ -124,20 +124,23 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
-        assert extras != null;
-        BookInfo book = BundleCompat.getParcelable(extras, "bookInfo", BookInfo.class);
+		BookInfo book = BundleCompat.getSerializable(extras, "bookInfo", BookInfo.class);
 		if (book != null) {
 			// invoked from chapter page
 			_chapNum = extras.getInt("chapter");
 			_bookNum = book.BookNumber;
 			_provider = book.getScriptProvider();
 			_activeLine = extras.getInt("line", 0);
-		} else {
+		} else if (savedInstanceState != null) {
 			// re-created, maybe after rotate, maybe eventually we start up here?
 			_chapNum = savedInstanceState.getInt(CHAP_NUM);
 			_bookNum = savedInstanceState.getInt(BOOK_NUM);
 			_activeLine = savedInstanceState.getInt(ACTIVE_LINE);
 			_provider = ServiceLocator.getServiceLocator().init(this).getScriptProvider();
+		} else {
+			// Something went wrong, no book info and no saved state.
+			finish();
+			return;
 		}
 		_lineCount = _provider.GetScriptLineCount(_bookNum, _chapNum);
 
