@@ -39,26 +39,25 @@ public class RecordButton extends CustomButton {
     @Override
     public void onDraw(Canvas canvas) {
         //super.onDraw(canvas);
-        int right = this.getRight();
-        int left = this.getLeft();
-        int bottom = this.getBottom();
-        int top = this.getTop();
-        int dim = Math.min(right - left, bottom - top) - 2;
-        float center = ((float)dim + 1)/2;
-        float radius = ((float)dim)/2 - 1; // The extra -1 seems to be needed to prevent clipping the circle.
+        int w = getWidth();
+        int h = getHeight();
+        int dim = Math.min(w, h) - 2;
+        float centerX = w / 2f;
+        float centerY = h / 2f;
+        float radius = (dim / 2f) - 1; // The extra -1 seems to be needed to prevent clipping the circle.
 
         switch (getButtonState())
         {
             case Normal:
-                canvas.drawCircle(center, center, radius, blueFillPaint);
+                canvas.drawCircle(centerX, centerY, radius, blueFillPaint);
                 if (getIsDefault())
-                    canvas.drawCircle(center, center, radius, highlightBorderPaint);
+                    canvas.drawCircle(centerX, centerY, radius, highlightBorderPaint);
                 break;
             case Pushed:
-                canvas.drawCircle(center, center, radius, getWaiting() ? waitPaint : recordingPaint);
+                canvas.drawCircle(centerX, centerY, radius, getWaiting() ? waitPaint : recordingPaint);
                 break;
             case Inactive: // not used
-                //canvas.drawCircle(center, center, radius, disabledPaint);
+                //canvas.drawCircle(centerX, centerY, radius, disabledPaint);
                 break;
         }
     }
