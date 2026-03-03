@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.sil.hearthis"
     android:versionCode="14"
     android:versionName="1.0.1">
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -26,36 +29,31 @@
             android:value="barcode" />
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-            android:label="@string/app_name">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".ChooseChapterActivity"
-            android:label="@string/app_name"></activity>
+            android:name=".ChooseChapterActivity"/>
         <activity
-            android:name=".RecordActivity"
-            android:label="@string/app_name"
-            android:screenOrientation="nosensor"></activity>
+            android:name=".RecordActivity"/>
         <activity
             android:name=".SyncActivity"
-            android:label="@string/title_activity_sync"></activity>
+            android:label="@string/title_activity_sync"/>
 
         <service
             android:name=".SyncService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync"></service>
+            android:foregroundServiceType="dataSync"/>
 
         <activity
             android:name=".ChooseBookActivity"
-            android:label="@string/title_activity_choose_book"></activity>
-        <activity android:name=".ChooseProjectActivity"></activity>
+            android:label="@string/title_activity_choose_book"/>
 
-        <uses-library android:name="org.apache.http.legacy" android:required="false"/>
+        <activity android:name=".ChooseProjectActivity"/>
     </application>
 
 </manifest>

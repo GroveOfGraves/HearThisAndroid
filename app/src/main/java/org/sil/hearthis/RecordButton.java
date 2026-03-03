@@ -5,6 +5,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 
+import androidx.core.content.ContextCompat;
+
 /**
  * Created by Thomson on 3/5/2016.
  */
@@ -12,16 +14,16 @@ public class RecordButton extends CustomButton {
     public RecordButton(Context context, AttributeSet attrs) {
         super(context, attrs);
         blueFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        blueFillPaint.setColor(context.getResources().getColor(R.color.audioButtonBlueColor));
+        blueFillPaint.setColor(ContextCompat.getColor(context, R.color.audioButtonBlueColor));
         highlightBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        highlightBorderPaint.setColor(context.getResources().getColor(R.color.buttonSuggestedBorderColor));
+        highlightBorderPaint.setColor(ContextCompat.getColor(context, R.color.buttonSuggestedBorderColor));
         highlightBorderPaint.setStrokeWidth(4f);
         highlightBorderPaint.setStyle(Paint.Style.STROKE);
 
         waitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        waitPaint.setColor(context.getResources().getColor(R.color.buttonWaitingColor));
+        waitPaint.setColor(ContextCompat.getColor(context, R.color.buttonWaitingColor));
         recordingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        recordingPaint.setColor(context.getResources().getColor(R.color.recordingColor));
+        recordingPaint.setColor(ContextCompat.getColor(context, R.color.recordingColor));
     }
 
     Paint blueFillPaint;
@@ -34,6 +36,12 @@ public class RecordButton extends CustomButton {
     public void setWaiting(boolean val) {
         waiting = val;
         postInvalidate();
+    }
+
+    @Override
+    public boolean performClick() {
+        // This allows accessibility services to handle the button
+        return super.performClick();
     }
 
     @Override

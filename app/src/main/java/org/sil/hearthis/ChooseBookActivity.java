@@ -16,6 +16,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.util.Objects;
+
 import Script.BookInfo;
 import Script.IScriptProvider;
 import Script.Project;
@@ -40,7 +42,7 @@ public class ChooseBookActivity extends AppCompatActivity {
 
         IScriptProvider scripture = ServiceLocator.getServiceLocator().init(this).getScriptProvider();
         Project project = new Project("Sample", scripture);
-        getSupportActionBar().setTitle(R.string.choose_book);
+        Objects.requireNonNull(getSupportActionBar()).setTitle(R.string.choose_book);
         setProject(project);
     }
 
