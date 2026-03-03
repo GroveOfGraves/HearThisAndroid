@@ -6,6 +6,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
 
+import androidx.core.content.ContextCompat;
+
 /**
  * Created by Thomson on 3/6/2016.
  */
@@ -13,17 +15,17 @@ public class PlayButton extends CustomButton {
     public PlayButton(Context context, AttributeSet attrs) {
         super(context, attrs);
         blueFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        blueFillPaint.setColor(context.getResources().getColor(R.color.audioButtonBlueColor));
+        blueFillPaint.setColor(ContextCompat.getColor(context, R.color.audioButtonBlueColor));
         highlightBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        highlightBorderPaint.setColor(context.getResources().getColor(R.color.buttonSuggestedBorderColor));
+        highlightBorderPaint.setColor(ContextCompat.getColor(context, R.color.buttonSuggestedBorderColor));
         highlightBorderPaint.setStrokeWidth(4f);
         highlightBorderPaint.setStyle(Paint.Style.STROKE);
 
         disabledPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        disabledPaint.setColor(context.getResources().getColor(R.color.audioButtonDisabledColor));
+        disabledPaint.setColor(ContextCompat.getColor(context, R.color.audioButtonDisabledColor));
 
         playBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        playBorderPaint.setColor(context.getResources().getColor(R.color.buttonSuggestedBorderColor));
+        playBorderPaint.setColor(ContextCompat.getColor(context, R.color.buttonSuggestedBorderColor));
         playBorderPaint.setStrokeWidth(6f);
         playBorderPaint.setStyle(Paint.Style.STROKE);
     }
@@ -35,6 +37,7 @@ public class PlayButton extends CustomButton {
     boolean playing;
     boolean getPlaying() { return playing;}
     void setPlaying(boolean val) {playing = val; }
+    private final Path arrow = new Path();
 
     @Override
     public void onDraw(Canvas canvas) {
@@ -47,10 +50,9 @@ public class PlayButton extends CustomButton {
         float deltaX = (w - size) / 2f + (getButtonState() == BtnState.Pushed || getPlaying() ? moveWhenPushed : 0f);
         float deltaY = (h - size) / 2f + (getButtonState() == BtnState.Pushed || getPlaying() ? moveWhenPushed : 0f);
 
-        Path arrow = new Path();
         arrow.moveTo(deltaX, deltaY);
-        arrow.lineTo(deltaX, (float) size + deltaY);
-        arrow.lineTo((float) size + deltaX, size / 2 + deltaY);
+        arrow.lineTo(deltaX, size + deltaY);
+        arrow.lineTo(size + deltaX, size / 2 + deltaY);
         arrow.lineTo(deltaX, deltaY);
         if (getPlaying()) {
             canvas.drawPath(arrow, blueFillPaint);

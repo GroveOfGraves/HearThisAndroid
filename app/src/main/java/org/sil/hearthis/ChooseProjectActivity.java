@@ -8,8 +8,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -27,9 +25,10 @@ public class ChooseProjectActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_choose_project);
 
-        View mainLayout = findViewById(R.id.projects_list);
-        if (mainLayout != null) {
-            ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
+        final ListView projectsList = findViewById(R.id.projects_list);
+        
+        if (projectsList != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(projectsList, (v, insets) -> {
                 Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
                 v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
                 return insets;
@@ -38,20 +37,18 @@ public class ChooseProjectActivity extends AppCompatActivity {
 
         Objects.requireNonNull(getSupportActionBar()).setTitle(R.string.choose_project);
         ServiceLocator.getServiceLocator().init(this);
+        
         final ArrayList<String> rootDirs = getProjectRootDirectories();
-        ListView projectsList = (ListView) findViewById(R.id.projects_list);
-        ArrayList<String> rootNames = new ArrayList<String>();
+        ArrayList<String> rootNames = new ArrayList<>();
         for (int i = 0; i < rootDirs.size(); i++)  {
             String path = rootDirs.get(i);
             rootNames.add(path.substring(path.lastIndexOf('/')+1));
         }
-        projectsList.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, rootNames));
-        projectsList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                onItemClicked(rootDirs.get(i));
-            }
-        });
+        
+        if (projectsList != null) {
+            projectsList.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, rootNames));
+            projectsList.setOnItemClickListener((parent, view, position, id) -> onItemClicked(rootDirs.get(position)));
+        }
     }
 
     void onItemClicked(String projectPath) {

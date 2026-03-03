@@ -6,6 +6,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
 
+import androidx.core.content.ContextCompat;
+
 /**
  * Created by Thomson on 3/6/2016.
  */
@@ -13,22 +15,22 @@ public class NextButton extends CustomButton {
     public NextButton(Context context, AttributeSet attrs) {
         super(context, attrs);
         blueFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        blueFillPaint.setColor(context.getResources().getColor(R.color.audioButtonBlueColor));
+        blueFillPaint.setColor(ContextCompat.getColor(context, R.color.audioButtonBlueColor));
         highlightBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        highlightBorderPaint.setColor(context.getResources().getColor(R.color.buttonSuggestedBorderColor));
+        highlightBorderPaint.setColor(ContextCompat.getColor(context, R.color.buttonSuggestedBorderColor));
         highlightBorderPaint.setStrokeWidth(4f);
         highlightBorderPaint.setStyle(Paint.Style.STROKE);
 
         waitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        waitPaint.setColor(context.getResources().getColor(R.color.buttonWaitingColor));
+        waitPaint.setColor(ContextCompat.getColor(context, R.color.buttonWaitingColor));
 
         playBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        playBorderPaint.setColor(context.getResources().getColor(R.color.buttonSuggestedBorderColor));
+        playBorderPaint.setColor(ContextCompat.getColor(context, R.color.buttonSuggestedBorderColor));
         playBorderPaint.setStrokeWidth(6f);
         playBorderPaint.setStyle(Paint.Style.STROKE);
 
         disabledPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        disabledPaint.setColor(context.getResources().getColor(R.color.audioButtonDisabledColor));
+        disabledPaint.setColor(ContextCompat.getColor(context, R.color.audioButtonDisabledColor));
     }
 
     Paint blueFillPaint;
@@ -36,6 +38,7 @@ public class NextButton extends CustomButton {
     Paint waitPaint;
     Paint disabledPaint;
     Paint playBorderPaint;
+    private final Path arrow = new Path();
 
     @Override
     public void onDraw(Canvas canvas) {
@@ -51,7 +54,6 @@ public class NextButton extends CustomButton {
         float midX = size / 2 + deltaX;
         float stemY = size * 12/33 + deltaY;
 
-        Path arrow = new Path();
         arrow.moveTo(midX + thick / 2, deltaY); // upper right corner of stem
         arrow.lineTo(midX - thick / 2, deltaY); // upper left corner of stem
         arrow.lineTo(midX - thick / 2, stemY); // left junction of stem and arrow
