@@ -80,6 +80,19 @@ public class SyncService extends Service {
         return START_NOT_STICKY; // Use NOT_STICKY as this service is tied to an active sync session
     }
 
+    @Override
+    public void onTimeout(int startId, int fgsType) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (fgsType == ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) {
+                Log.w(TAG, "SyncService timed out (6 hour limit reached). Cleaning up...");
+                if (_server != null) {
+                    _server.stopThread();
+                }
+                stopSelf();
+            }
+        }
+    }
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(

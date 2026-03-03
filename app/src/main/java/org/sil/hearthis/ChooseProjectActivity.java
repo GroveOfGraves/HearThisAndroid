@@ -14,6 +14,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 import Script.FileSystem;
 import Script.RealScriptProvider;
@@ -35,14 +36,14 @@ public class ChooseProjectActivity extends AppCompatActivity {
             });
         }
 
-        getSupportActionBar().setTitle(R.string.choose_project);
+        Objects.requireNonNull(getSupportActionBar()).setTitle(R.string.choose_project);
         ServiceLocator.getServiceLocator().init(this);
         final ArrayList<String> rootDirs = getProjectRootDirectories();
         ListView projectsList = (ListView) findViewById(R.id.projects_list);
         ArrayList<String> rootNames = new ArrayList<String>();
         for (int i = 0; i < rootDirs.size(); i++)  {
             String path = rootDirs.get(i);
-            rootNames.add(path.substring(path.lastIndexOf('/')+1, path.length()));
+            rootNames.add(path.substring(path.lastIndexOf('/')+1));
         }
         projectsList.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, rootNames));
         projectsList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
