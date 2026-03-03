@@ -6,6 +6,7 @@
     <string name="alt_sync_message">Or you can enter this code into the dialog on the desktop:</string>
     <string name="sync_desktop">Sync with desktop app</string>
     <string name="choose_passage">Choose passage</string>
+    <string name="play_speaker">Play using speaker</string>
     <string name="Open">Open</string>
     <string name="Publish">Publish</string>
     <string name="Play">Play</string>
@@ -37,4 +38,5 @@
     <string name="receiving_file">receiving %1$s</string>
     <string name="sending_file">sending %1$s</string>
     <string name="ip_error">Something Wrong! %1$s</string>
+
 </resources>
