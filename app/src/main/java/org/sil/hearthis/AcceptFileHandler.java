@@ -42,12 +42,15 @@ public class AcceptFileHandler {
             }
 
             if (contentOrPath != null && filePath != null) {
+                assert baseDir != null;
                 String path = baseDir.getAbsolutePath() + "/" + filePath;
                 File file = new File(path);
                 
                 File dir = file.getParentFile();
                 if (dir != null && !dir.exists()) {
-                    dir.mkdirs();
+                    if (!dir.mkdirs()){
+                        Log.e("Recorder","Error creating directory at " + dir.getAbsolutePath());
+                    }
                 }
 
                 // Check if it's a file path or raw content.
