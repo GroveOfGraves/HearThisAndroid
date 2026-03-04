@@ -2,7 +2,6 @@ package org.sil.hearthis;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 import java.util.Objects;
 
 import Script.BibleLocation;
@@ -78,9 +77,9 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	NextButton nextButton;
 	RecordButton recordButton;
 	PlayButton playButton;
-	Date startRecordingTime;
+	long startRecordingTime;
+	private final Object startingLock = new Object();
 	volatile boolean starting = false;
-    volatile boolean stopRequestedEarly = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -108,7 +107,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			// Apply BOTTOM padding specifically to the ScrollView parent of _linesView
 			// This allows the text to scroll behind the navigation bar but stay accessible.
 			if (_linesView != null && _linesView.getParent() instanceof ScrollView scrollView) {
-                scrollView.setPadding(0, 0, 0, insets.bottom);
+				scrollView.setPadding(0, 0, 0, insets.bottom);
 				scrollView.setClipToPadding(false);
 			}
 
@@ -124,6 +123,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
+		assert extras != null;
 		BookInfo book = BundleCompat.getSerializable(extras, "bookInfo", BookInfo.class);
 		if (book != null) {
 			// invoked from chapter page
@@ -131,16 +131,12 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			_bookNum = book.BookNumber;
 			_provider = book.getScriptProvider();
 			_activeLine = extras.getInt("line", 0);
-		} else if (savedInstanceState != null) {
+		} else {
 			// re-created, maybe after rotate, maybe eventually we start up here?
 			_chapNum = savedInstanceState.getInt(CHAP_NUM);
 			_bookNum = savedInstanceState.getInt(BOOK_NUM);
 			_activeLine = savedInstanceState.getInt(ACTIVE_LINE);
 			_provider = ServiceLocator.getServiceLocator().init(this).getScriptProvider();
-		} else {
-			// Something went wrong, no book info and no saved state.
-			finish();
-			return;
 		}
 		_lineCount = _provider.GetScriptLineCount(_bookNum, _chapNum);
 
@@ -152,6 +148,8 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			ScriptLine line = _provider.GetLine(_bookNum, _chapNum, i);
 			TextView lineView = (TextView) inflater.inflate(R.layout.text_line, _linesView, false);
 			lineView.setText(line.Text);
+			//lineView.setTypeface(mtfl, 0);
+
 			_linesView.addView(lineView);
 			setTextColor(i);
 			lineView.setOnClickListener(this);
@@ -164,12 +162,12 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 		recordButton = findViewById(R.id.recordButton);
 		recordButton.setOnTouchListener((v, e) -> {
-            if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                v.performClick();
-            }
-            recordButtonTouch(e);
-            return true; // we handle all touch events on this button.
-        });
+			if (e.getAction() == MotionEvent.ACTION_DOWN){
+				v.performClick();
+			}
+			recordButtonTouch(e);
+			return true; // we handle all touch events on this button.
+		});
 
 		playButton = findViewById(R.id.playButton);
 		playButton.setOnClickListener(v -> playButtonClicked());
@@ -249,13 +247,14 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		setTextColor(oldLine);
 		setTextColor(_activeLine);
 
-		ScrollView scrollView = (ScrollView) _linesView.getParent();
-		int[] tops = new int[_linesView.getChildCount() + 1];
-		for (int i = 0; i < tops.length - 1; i++) {
-			tops[i] = _linesView.getChildAt(i).getTop();
+		if (_linesView.getParent() instanceof ScrollView scrollView) {
+			int[] tops = new int[_linesView.getChildCount() + 1];
+			for (int i = 0; i < tops.length - 1; i++) {
+				tops[i] = _linesView.getChildAt(i).getTop();
+			}
+			tops[tops.length - 1] = _linesView.getChildAt(tops.length - 2).getBottom();
+			scrollView.scrollTo(0, getNewScrollPosition(scrollView.getScrollY(), scrollView.getHeight(), _activeLine, tops));
 		}
-		tops[tops.length - 1] = _linesView.getChildAt(tops.length - 2).getBottom();
-		scrollView.scrollTo(0, getNewScrollPosition(scrollView.getScrollY(), scrollView.getHeight(), _activeLine, tops));
 		_recordingFilePath = _provider.getRecordingFilePath(_bookNum, _chapNum, _activeLine);
 		recordButton.setIsDefault(true);
 		nextButton.setIsDefault(false);
@@ -344,35 +343,30 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			waveRecorder.release();
 		waveRecorder = new WavAudioRecorder(AudioSource.MIC, 44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
 		File oldRecording = new File(_recordingFilePath);
-		if (oldRecording.exists()){
-			if(!oldRecording.delete()){
-				Log.e("Recorder","Failed to delete existing recording at " + _recordingFilePath);
+		if (oldRecording.exists())
+			if (!oldRecording.delete()){
+				Log.e("Recorder","Error deleting old recording at" + _recordingFilePath);
 			}
-		}
 		waveRecorder.setOutputFile(_recordingFilePath);
 		waveRecorder.prepare();
 		waveRecorder.setMonitorListener(this);
 		waveRecorder.start();
 		recordButton.setWaiting(false);
-		startRecordingTime = new Date();
-		starting = false;
-        if (stopRequestedEarly) {
-            runOnUiThread(() -> {
-                if (stopRequestedEarly) {
-                    stopRequestedEarly = false;
-                    stopRecording();
-                }
-            });
-        }
+		startRecordingTime = System.currentTimeMillis();
+		synchronized (startingLock) {
+			starting = false;
+			startingLock.notifyAll();
+		}
 	}
 
 	void startRecording() {
 		stopPlaying();
 		recordButton.setButtonState(BtnState.Pushed);
 		recordButton.setWaiting(true);
-        stopRequestedEarly = false;
 		if (useWaveRecorder) {
-			starting = true; // protects against trying to stop the recording before we finish starting it.
+			synchronized (startingLock) {
+				starting = true; // protects against trying to stop the recording before we finish starting it.
+			}
 			// Do the initialization of the recorder in another thread so the main one
 			//  can color the button red until we really start recording.
 			new Thread(this::startWaveRecorder).start();
@@ -401,20 +395,18 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		recorder.setAudioEncodingBitRate(44100);
 		File file = new File(_recordingFilePath);
 		File dir = file.getParentFile();
-        assert dir != null;
-        if (!dir.exists()){
-			if(!dir.mkdirs()){
-				Log.e("Recorder","Failed to make directory at " + _recordingFilePath);
+        if (dir != null && !dir.exists())
+			if (!dir.mkdirs()){
+				Log.e("Recorder","Error creating directory at " + _recordingFilePath);
 			}
-		}
 		recorder.setOutputFile(file.getAbsolutePath());
 		try {
 			recorder.prepare();
 			recorder.start();
 			recordButton.setWaiting(false);
-			startRecordingTime = new Date();
+			startRecordingTime = System.currentTimeMillis();
 		} catch (IOException e) {
-			Log.e("Recorder", "Failed to prepare or start recording", e);
+			Log.e("Recorder", "Error preparing recorder", e);
 		}
 	}
 
@@ -468,12 +460,20 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			}
 		}
 	}
-
+	
 	void stopRecording() {
-		Date beginStop = new Date();
-		if (starting) {
-			stopRequestedEarly = true;
-			return;
+		long beginStop = System.currentTimeMillis();
+		synchronized (startingLock) {
+			while (starting) {
+				// ouch! this will probably be a short-recording problem! The thread that is
+				// trying to start the recording hasn't finished! Wait until it does.
+				try {
+					startingLock.wait(100);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					break;
+				}
+			}
 		}
 		recordButton.setButtonState(BtnState.Normal);
 		recordButton.setWaiting(false);
@@ -489,22 +489,23 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			Log.d("Recorder", "Recorder finished and made file " + file.getAbsolutePath() + " with length " + file.length());
 			recorder = null;
 		}
-		// Don't just use new Date() here. It can take ~half a second to get things stopped.
-		if (beginStop.getTime() - startRecordingTime.getTime() < 500) {
+		// Don't just use current time here. It can take ~half a second to get things stopped.
+		if (beginStop - startRecordingTime < 500) {
 			// Press not long enough; treat as failure.
 			new AlertDialog.Builder(this)
 					//.setTitle("Too short!")
 					.setMessage(R.string.record_too_short)
 					.setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                        // nothing to do
-                    })
+						// nothing to do
+					})
 					.setIcon(android.R.drawable.ic_dialog_alert)
 					.show();
 			File badFile = new File(_recordingFilePath);
-			if (badFile.exists()){
-				if(!badFile.delete()){
-					Log.e("Recorder","Failed to delete bad file at " + _recordingFilePath);
+			if (badFile.exists()) {
+				if (!badFile.delete()){
+					Log.e("Recorder","Error deleting bad file at " + _recordingFilePath);
 				}
+				// for now just ignore if we can't delete. (Does not throw.)
 			}
 			return; // skip state changes for successful recording
 		}
@@ -533,14 +534,14 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			
 			File file = new File(_recordingFilePath);
 			playButtonPlayer.setDataSource(file.getAbsolutePath());
-            playButtonPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build());
-            playButtonPlayer.prepare();
+			playButtonPlayer.setAudioAttributes(new AudioAttributes.Builder()
+					.setUsage(AudioAttributes.USAGE_MEDIA)
+					.setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+					.build());
+			playButtonPlayer.prepare();
 			playButtonPlayer.start();
 		} catch (Exception e) {
-			Log.e("Recorder", "Error playing recording", e);
+			Log.e("Player", "Error playing audio", e);
 		}		
 	}
 

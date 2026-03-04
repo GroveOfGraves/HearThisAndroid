@@ -12,7 +12,7 @@ public class AcceptNotificationHandler {
     public interface NotificationListener {
         void onNotification(String message);
     }
-    static ArrayList<NotificationListener> notificationListeners = new ArrayList<NotificationListener>();
+    static ArrayList<NotificationListener> notificationListeners = new ArrayList<>();
 
     public static void addNotificationListener(NotificationListener listener) {
         notificationListeners.add(listener);
@@ -25,7 +25,7 @@ public class AcceptNotificationHandler {
     public Response handle(NanoHTTPD.IHTTPSession session) {
         // Enhance: allow the notification to contain a message, and pass it on.
         // The copy is made because the onNotification calls may well remove listeners, leading to concurrent modification exceptions.
-        for (NotificationListener listener : notificationListeners.toArray(new NotificationListener[notificationListeners.size()])) {
+        for (NotificationListener listener : notificationListeners.toArray(new NotificationListener[0])) {
             listener.onNotification("");
         }
         return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "success");

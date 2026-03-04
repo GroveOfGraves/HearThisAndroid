@@ -39,28 +39,28 @@ public class ChooseChapterActivity extends AppCompatActivity {
 		ServiceLocator.getServiceLocator().init(this);
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
+        assert extras != null;
         final BookInfo book = (BookInfo)extras.get("bookInfo");
 		
-		TextView bookBox = (TextView)findViewById(R.id.bookNameText);
+		TextView bookBox = findViewById(R.id.bookNameText);
+        assert book != null;
         bookBox.setText(book.Name);
 		
 		LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		ViewGroup chapsFlow = (ViewGroup) findViewById(R.id.chapsFlow);
+		ViewGroup chapsFlow = findViewById(R.id.chapsFlow);
 		chapsFlow.removeAllViews();
+
+		ChapterButton chapButton;
 		for (int i = 0; i <= book.ChapterCount; i++) {
-            ChapterButton chapButton = (ChapterButton) inflater.inflate(R.layout.chap_button, null);
+            chapButton = (ChapterButton) inflater.inflate(R.layout.chap_button, chapsFlow, false);
 			chapButton.init(book.getScriptProvider(), book.BookNumber, i);
 			final int safeChapNum = i;
-			chapButton.setOnClickListener(new android.view.View.OnClickListener() {
-				
-				@Override
-				public void onClick(View v) {
-					// set up activity for recording chapter safeChapNum of book						
-					Intent record = new Intent(ChooseChapterActivity.this, RecordActivity.class);
-					record.putExtra("bookInfo", book);
-					record.putExtra("chapter", safeChapNum);
-					startActivity(record);
-				}
+			chapButton.setOnClickListener( v -> {
+				// set up activity for recording chapter safeChapNum of book
+				Intent record = new Intent(ChooseChapterActivity.this, RecordActivity.class);
+				record.putExtra("bookInfo", book);
+				record.putExtra("chapter", safeChapNum);
+				startActivity(record);
 			});
 			chapsFlow.addView(chapButton);
 		}
