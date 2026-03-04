@@ -2,10 +2,8 @@ package org.sil.hearthis;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -44,11 +42,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,14 +59,15 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     Button continueButton;
     TextView ipView;
     PreviewView previewView;
-    int desktopPort = 11007; // port on which the desktop is listening for our IP address.
     private static final int REQUEST_CAMERA_PERMISSION = 201;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 202;
     boolean scanning = false;
     TextView progressView;
 
     private ExecutorService cameraExecutor;
+    private static final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
     private BarcodeScanner barcodeScanner;
+    private ProcessCameraProvider cameraProvider;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,18 +105,15 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         previewView.setVisibility(View.INVISIBLE);
         continueButton.setEnabled(false);
         final SyncActivity thisActivity = this;
-        continueButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                thisActivity.finish();
-            }
-        });
+        continueButton.setOnClickListener(view -> thisActivity.finish());
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
                 .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
                 .build();
         barcodeScanner = BarcodeScanning.getClient(options);
+
+        AcceptNotificationHandler.addNotificationListener(this);
     }
 
     private void requestNotificationPermissionAndStartSync() {
@@ -129,20 +123,10 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                     new AlertDialog.Builder(this)
                             .setTitle(R.string.need_permissions)
                             .setMessage(R.string.notification_for_sync)
-                            .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    ActivityCompat.requestPermissions(SyncActivity.this,
-                                            new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                                            REQUEST_NOTIFICATION_PERMISSION);
-                                }
-                            })
-                            .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    startSyncServer();
-                                }
-                            })
+                            .setPositiveButton(R.string.ok, (dialog, which) -> ActivityCompat.requestPermissions(SyncActivity.this,
+                                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                                    REQUEST_NOTIFICATION_PERMISSION))
+                            .setNegativeButton(R.string.cancel, (dialog, which) -> startSyncServer())
                             .create().show();
                 } else {
                     ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_PERMISSION);
@@ -173,6 +157,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        AcceptNotificationHandler.removeNotificationListener(this);
         if (isFinishing()) {
             stopSyncServer();
         }
@@ -185,21 +170,25 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         getMenuInflater().inflate(R.menu.menu_sync, menu);
         ipView = findViewById(R.id.ip_address);
         scanBtn = findViewById(R.id.scan_button);
-        scanBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (ActivityCompat.checkSelfPermission(SyncActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                    startCamera();
-                } else {
-                    ActivityCompat.requestPermissions(SyncActivity.this, new
-                            String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-                }
+        scanBtn.setOnClickListener(v -> {
+            if (ActivityCompat.checkSelfPermission(SyncActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                startCamera();
+            } else {
+                ActivityCompat.requestPermissions(SyncActivity.this, new
+                        String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
             }
         });
-        String ourIpAddress = getOurIpAddress();
-        TextView ourIpView = findViewById(R.id.our_ip_address);
-        ourIpView.setText(ourIpAddress);
-        AcceptNotificationHandler.addNotificationListener(this);
+        
+        networkExecutor.execute(() -> {
+            String ourIpAddress = getOurIpAddress();
+            runOnUiThread(() -> {
+                TextView ourIpView = findViewById(R.id.our_ip_address);
+                if (ourIpView != null) {
+                    ourIpView.setText(ourIpAddress);
+                }
+            });
+        });
+        
         return true;
     }
 
@@ -211,7 +200,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
         cameraProviderFuture.addListener(() -> {
             try {
-                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                cameraProvider = cameraProviderFuture.get();
 
                 Preview preview = new Preview.Builder().build();
                 preview.setSurfaceProvider(previewView.getSurfaceProvider());
@@ -259,26 +248,29 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     }
 
     private void handleBarcode(Barcode barcode) {
-        String contents = barcode.getDisplayValue();
-        if (contents == null) return;
+        String desktopIpAddress = barcode.getDisplayValue();
+        if (desktopIpAddress == null) return;
         
         scanning = false;
         runOnUiThread(() -> {
-            ipView.setText(contents);
+            ipView.setText(desktopIpAddress);
             previewView.setVisibility(View.INVISIBLE);
             
-            SendMessage sendMessageTask = new SendMessage();
-            sendMessageTask.ourIpAddress = getOurIpAddress();
-            sendMessageTask.desktopIpAddress = contents;
-            sendMessageTask.execute();
-            
-            ProcessCameraProvider cameraProvider;
-            try {
-                cameraProvider = ProcessCameraProvider.getInstance(this).get();
+            if (cameraProvider != null) {
                 cameraProvider.unbindAll();
-            } catch (ExecutionException | InterruptedException e) {
-                Log.e(TAG, "Failed to unbind camera", e);
             }
+
+            networkExecutor.execute(() -> {
+                final String ourIpAddress = getOurIpAddress();
+                try (DatagramSocket socket = new DatagramSocket()) {
+                    InetAddress receiverAddress = InetAddress.getByName(desktopIpAddress);
+                    byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
+                    socket.send(packet);
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to send UDP packet", e);
+                }
+            });
         });
     }
 
@@ -316,7 +308,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 }
             }
         } catch (SocketException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Failed to get IP address", e);
             ip = getString(R.string.ip_error, e.toString());
         }
         return ip;
@@ -324,7 +316,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     @Override
     public void onNotification(String message) {
-        AcceptNotificationHandler.removeNotificationListener(this);
+        // No need to unregister here as onDestroy handles it safely
         setProgress(getString(R.string.sync_success));
         runOnUiThread(() -> continueButton.setEnabled(true));
     }
@@ -349,23 +341,5 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             return;
         lastProgress = new Date();
         setProgress(getString(R.string.sending_file, name));
-    }
-
-    private static class SendMessage extends AsyncTask<Void, Void, Void> {
-        public String ourIpAddress;
-        public String desktopIpAddress;
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            try (DatagramSocket socket = new DatagramSocket()) {
-                InetAddress receiverAddress = InetAddress.getByName(desktopIpAddress);
-                byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
-                socket.send(packet);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
     }
 }
