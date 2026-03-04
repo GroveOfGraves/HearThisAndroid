@@ -8,6 +8,8 @@ import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -68,6 +70,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     private ExecutorService cameraExecutor;
     private BarcodeScanner barcodeScanner;
+    private final Handler registrationHandler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,7 +106,13 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         previewView = findViewById(R.id.preview_view);
         previewView.setVisibility(View.INVISIBLE);
         continueButton.setEnabled(false);
-        continueButton.setOnClickListener(view -> finish());
+        continueButton.setOnClickListener(view -> {
+            // After sync, we often want to go back to the project selection if things changed,
+            // or just finish to return to the previous screen.
+            // The user mentioned "transition from sync view to book view".
+            // If finishing isn't enough, we could explicitly start ChooseBookActivity.
+            finish();
+        });
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
@@ -136,8 +145,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     private void startSyncServer() {
         Intent serviceIntent = new Intent(this, SyncService.class);
         startService(serviceIntent);
-        // Try to register listeners as soon as the service might be ready
-        registerListeners();
+        startRegistrationRetry();
     }
 
     private void stopSyncServer() {
@@ -148,23 +156,43 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     @Override
     protected void onResume() {
         super.onResume();
-        registerListeners();
+        startRegistrationRetry();
     }
 
     @Override
     protected void onPause() {
+        registrationHandler.removeCallbacks(registrationRunnable);
         unregisterListeners();
         super.onPause();
     }
 
-    private void registerListeners() {
+    private final Runnable registrationRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (registerListeners()) {
+                Log.d(TAG, "Successfully registered sync listeners");
+            } else {
+                Log.d(TAG, "SyncService not ready yet, retrying registration...");
+                registrationHandler.postDelayed(this, 500);
+            }
+        }
+    };
+
+    private void startRegistrationRetry() {
+        registrationHandler.removeCallbacks(registrationRunnable);
+        registrationHandler.post(registrationRunnable);
+    }
+
+    private boolean registerListeners() {
         SyncService service = SyncService.getInstance();
         if (service != null && service.getServer() != null) {
             SyncServer server = service.getServer();
             server.getAcceptFileHandler().setListener(this);
             server.getRequestFileHandler().setListener(this);
             server.getAcceptNotificationHandler().addNotificationListener(this);
+            return true;
         }
+        return false;
     }
 
     private void unregisterListeners() {
@@ -203,7 +231,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         String ourIpAddress = getOurIpAddress();
         TextView ourIpView = findViewById(R.id.our_ip_address);
         ourIpView.setText(ourIpAddress);
-        // Listeners are now registered in onResume/registerListeners
         return true;
     }
 
@@ -276,7 +303,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             sendMessageTask.desktopIpAddress = contents;
             sendMessageTask.execute();
             
-            // Fix UI Thread Violation: Use the future with a listener instead of blocking .get()
             ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
             cameraProviderFuture.addListener(() -> {
                 try {
@@ -330,7 +356,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     @Override
     public void onNotification(String message) {
-        // Safe because notificationListeners is now a CopyOnWriteArrayList
         SyncService service = SyncService.getInstance();
         if (service != null && service.getServer() != null) {
             service.getServer().getAcceptNotificationHandler().removeNotificationListener(this);
@@ -363,8 +388,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         setProgress(getString(R.string.sending_file, name));
     }
 
-    // Keep AsyncTask for now as it's simple for this one-off network packet, 
-    // but ensured it doesn't leak or block UI inappropriately.
     private static class SendMessage extends AsyncTask<Void, Void, Void> {
         public String ourIpAddress;
         public String desktopIpAddress;
