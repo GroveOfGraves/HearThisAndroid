@@ -31,7 +31,23 @@ public class SyncServer extends NanoHTTPD {
         acceptNotificationHandler = new AcceptNotificationHandler();
     }
 
-    public void startThread() {
+    public RequestFileHandler getRequestFileHandler() {
+        return requestFileHandler;
+    }
+
+    public AcceptFileHandler getAcceptFileHandler() {
+        return acceptFileHandler;
+    }
+
+    public AcceptNotificationHandler getAcceptNotificationHandler() {
+        return acceptNotificationHandler;
+    }
+
+    public synchronized void startThread() {
+        if (wasStarted() && isAlive()) {
+            Log.d(TAG, "Server already running.");
+            return;
+        }
         try {
             start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
             Log.d(TAG, "Server started on port " + SERVER_PORT);
@@ -40,9 +56,11 @@ public class SyncServer extends NanoHTTPD {
         }
     }
 
-    public void stopThread() {
-        stop();
-        Log.d(TAG, "Server stopped");
+    public synchronized void stopThread() {
+        if (wasStarted()) {
+            stop();
+            Log.d(TAG, "Server stopped");
+        }
     }
 
     @Override
@@ -59,7 +77,6 @@ public class SyncServer extends NanoHTTPD {
         } else if (uri.startsWith("/notify")) {
             return acceptNotificationHandler.handle(session);
         } else {
-            // Default handler (originally registry.register("*", ...))
             return deviceNameHandler.handle(session);
         }
     }

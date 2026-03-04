@@ -1,5 +1,6 @@
 package org.sil.hearthis;
 
+import android.os.Build;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response;
 
@@ -13,7 +14,11 @@ public class DeviceNameHandler {
     }
 
     public Response handle(NanoHTTPD.IHTTPSession session) {
-        String resp = "John's Android";
-        return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, "text/plain", resp);
+        // Use the device model name instead of a hardcoded string.
+        String deviceName = Build.MODEL;
+        if (deviceName == null || deviceName.isEmpty()) {
+            deviceName = "Android Device";
+        }
+        return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, "text/plain", deviceName);
     }
 }
