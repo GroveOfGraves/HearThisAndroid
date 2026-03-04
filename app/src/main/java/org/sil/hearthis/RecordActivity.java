@@ -397,7 +397,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		File dir = file.getParentFile();
         if (dir != null && !dir.exists())
 			if (!dir.mkdirs()){
-				Log.e("Recorder","Error creating directory at " + dir.getAbsolutePath());
+				Log.e("Recorder","Error creating directory at " + _recordingFilePath);
 			}
 		recorder.setOutputFile(file.getAbsolutePath());
 		try {

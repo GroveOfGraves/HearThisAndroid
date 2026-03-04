@@ -4,12 +4,7 @@ import Script.BookInfo;
 import Script.IScriptProvider;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Rect;
 import android.util.AttributeSet;
-import android.view.View;
-
 
 public class BookButton  extends ProgressButton {
 
@@ -85,13 +80,13 @@ public class BookButton  extends ProgressButton {
     @Override
     protected String getLabel() {
         // Added null check for Model and Abbr to prevent NullPointerException during rendering in IDE.
-        if (Model == null || Model.Abbr == null || Model.Abbr.length() == 0) {
+        if (Model == null || Model.Abbr == null || Model.Abbr.isEmpty()) {
             return "";
         }
         char first = Model.Abbr.charAt(0);
         String abbr = Model.Abbr;
         if (first >= '0' && first <= '9') {
-        	abbr = abbr.substring(0,1) + abbr.substring(1,2).toUpperCase() + abbr.substring(2);
+        	abbr = abbr.charAt(0) + abbr.substring(1,2).toUpperCase() + abbr.substring(2);
         }
         else {
         	abbr = abbr.substring(0,1).toUpperCase() + abbr.substring(1);
