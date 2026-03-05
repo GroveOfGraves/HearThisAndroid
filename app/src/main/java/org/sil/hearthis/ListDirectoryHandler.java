@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import fi.iki.elonen.NanoHTTPD;
@@ -29,10 +30,10 @@ public class ListDirectoryHandler {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "External storage not available");
         }
 
-        String filePath = session.getParms().get("path");
-        if (filePath == null) {
-            filePath = "";
-        }
+        List<String> pathParams = session.getParameters().get("path");
+        String filePath = (pathParams != null && !pathParams.isEmpty())
+                ? pathParams.get(0).replace('\\', '/')
+                : "";
 
         // Fix Path Traversal Vulnerability
         File file = new File(baseDir, filePath);

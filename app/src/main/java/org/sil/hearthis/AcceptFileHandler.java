@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response;
@@ -27,10 +28,12 @@ public class AcceptFileHandler {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "External storage not available");
         }
 
-        String filePath = session.getParms().get("path");
-        if (filePath != null) {
-            filePath = filePath.replace('\\', '/');
-        } else {
+        List<String> pathParams = session.getParameters().get("path");
+        String filePath = (pathParams != null && !pathParams.isEmpty())
+                ? pathParams.get(0).replace('\\', '/')
+                : null;
+
+        if (filePath == null) {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "Missing path parameter");
         }
 

@@ -5,6 +5,8 @@ import android.util.Log;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.List;
+
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response;
 
@@ -26,9 +28,14 @@ public class RequestFileHandler {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "External storage not available");
         }
 
-        String filePath = session.getParms().get("path");
+        List<String> pathParams = session.getParameters().get("path");
+        String filePath = (pathParams != null && !pathParams.isEmpty())
+                ? pathParams.get(0).replace('\\', '/')
+                : null;
+
         if (filePath == null) {
-            return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "Missing path parameter");
+            return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST,
+                    NanoHTTPD.MIME_PLAINTEXT, "Missing path parameter");
         }
 
         // Fix Path Traversal Vulnerability
