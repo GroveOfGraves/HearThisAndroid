@@ -52,7 +52,7 @@ public class ChooseChapterActivity extends AppCompatActivity {
 
 		ChapterButton chapButton;
 		for (int i = 0; i <= book.ChapterCount; i++) {
-            chapButton = (ChapterButton) inflater.inflate(R.layout.chap_button, chapsFlow, false);
+			chapButton = (ChapterButton) inflater.inflate(R.layout.chap_button, chapsFlow, false);
 			chapButton.init(book.getScriptProvider(), book.BookNumber, i);
 			final int safeChapNum = i;
 			chapButton.setOnClickListener( v -> {

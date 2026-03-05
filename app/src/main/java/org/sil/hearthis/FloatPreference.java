@@ -1,11 +1,9 @@
 package org.sil.hearthis;
 
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.text.InputType;
 import android.util.AttributeSet;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.EditTextPreference;
 
@@ -15,11 +13,6 @@ public class FloatPreference extends EditTextPreference {
         // Use the lambda here to restrict input to numbers/decimals
         setOnBindEditTextListener(editText ->
                 editText.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL));
-    }
-
-    @Override
-    protected Object onGetDefaultValue(@NonNull TypedArray a, int index) {
-        return a.getString(index);
     }
 
     @Override
