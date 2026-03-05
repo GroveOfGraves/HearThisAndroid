@@ -14,15 +14,15 @@ public class AcceptNotificationHandler {
         void onNotification(String message);
     }
     
-    private static final List<NotificationListener> notificationListeners = new CopyOnWriteArrayList<>();
+    private final List<NotificationListener> notificationListeners = new CopyOnWriteArrayList<>();
 
-    public static void addNotificationListener(NotificationListener listener) {
+    public void addNotificationListener(NotificationListener listener) {
         if (listener != null && !notificationListeners.contains(listener)) {
             notificationListeners.add(listener);
         }
     }
 
-    public static void removeNotificationListener(NotificationListener listener) {
+    public void removeNotificationListener(NotificationListener listener) {
         notificationListeners.remove(listener);
     }
 
