@@ -382,7 +382,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		recorder.setAudioEncodingBitRate(44100);
 		File file = new File(_recordingFilePath);
 		File dir = file.getParentFile();
-        if (dir != null && !dir.exists())
+		if (dir != null && !dir.exists())
 			if (!dir.mkdirs()){
 				Log.e("Recorder","Error creating directory at " + _recordingFilePath);
 			}
