@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response;
@@ -27,18 +28,23 @@ public class AcceptFileHandler {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "External storage not available");
         }
 
-        String filePath = session.getParms().get("path");
-        if (filePath != null) {
-            filePath = filePath.replace('\\', '/');
-        } else {
+        Map<String, List<String>> parameters = session.getParameters();
+        String filePath = null;
+        if (parameters.containsKey("path") && !parameters.get("path").isEmpty()) {
+            filePath = parameters.get("path").get(0).replace('\\', '/');
+        }
+
+        if (filePath == null) {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "Missing path parameter");
         }
 
         // Fix Path Traversal Vulnerability
         File file = new File(baseDir, filePath);
         try {
-            if (!file.getCanonicalPath().startsWith(baseDir.getCanonicalPath())) {
-                Log.w(TAG, "Attempted path traversal: " + filePath);
+            // Verify path is inside baseDir to prevent traversal attacks
+            String canonicalBase = baseDir.getCanonicalPath();
+            String canonicalRequested = file.getCanonicalPath();
+            if (!canonicalRequested.startsWith(canonicalBase)) {
                 return NanoHTTPD.newFixedLengthResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "Access denied");
             }
         } catch (IOException e) {
@@ -61,14 +67,10 @@ public class AcceptFileHandler {
             if (contentOrPath != null) {
                 File dir = file.getParentFile();
                 if (dir != null && !dir.exists()) {
-                    if (!dir.mkdirs()){
-                        Log.e("Recorder","Error creating directory at " + dir.getAbsolutePath());
-                    }
+                    dir.mkdirs();
                 }
 
                 // Check if it's a file path or raw content.
-                // Raw content (XML or info.txt) won't start with / and be a valid path.
-                // We also limit the length check for path strings to avoid ENAMETOOLONG on the exists() call.
                 boolean isPath = false;
                 if (contentOrPath.length() < 1024 && contentOrPath.startsWith("/")) {
                     File srcFile = new File(contentOrPath);
@@ -84,14 +86,11 @@ public class AcceptFileHandler {
                         out.write(contentOrPath.getBytes(StandardCharsets.UTF_8));
                     }
                 }
-                Log.d(TAG, "Successfully saved file to: " + file.getAbsolutePath());
                 return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "success\n");
             } else {
-                Log.e(TAG, "No content found in request body");
                 return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "failure: no content\n");
             }
         } catch (Exception e) {
-            Log.e(TAG, "Failed to accept file: " + filePath, e);
             return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "failure: " + e.getMessage() + "\n");
         }
     }
