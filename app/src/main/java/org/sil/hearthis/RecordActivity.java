@@ -65,15 +65,12 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	boolean wasUsingSpeaker;
 	MediaPlayer playButtonPlayer;
 
-	//Typeface mtfl;
-
-	// We can't use two recorders at once, so may as well be static.
-	static MediaRecorder recorder = null;
-	static WavAudioRecorder waveRecorder = null;
+	// Back to instance variables to avoid resource contention, but using safe lifecycle management.
+	private MediaRecorder recorder = null;
+	private WavAudioRecorder waveRecorder = null;
 	public static boolean useWaveRecorder = true;
 	LevelMeterView levelMeter;
 
-	// Enhance: move to AudioButtonsFragment
 	NextButton nextButton;
 	RecordButton recordButton;
 	PlayButton playButton;
@@ -91,21 +88,16 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_record);
 
-		// Find the root layout and the level row
 		View root = findViewById(R.id.recordActivityRoot);
 		if (root == null){
 			root = findViewById(android.R.id.content);
 		}
 
-		// Apply Window Insets
 		ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
 			Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
 
-			// Apply TOP padding to the root (so the title bar isn't hidden by the status bar)
 			v.setPadding(insets.left, insets.top, insets.right, 0);
 
-			// Apply BOTTOM padding specifically to the ScrollView parent of _linesView
-			// This allows the text to scroll behind the navigation bar but stay accessible.
 			if (_linesView != null && _linesView.getParent() instanceof ScrollView scrollView) {
 				scrollView.setPadding(0, 0, 0, insets.bottom);
 				scrollView.setClipToPadding(false);
@@ -115,10 +107,6 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		});
 
 		Objects.requireNonNull(getSupportActionBar()).setTitle(R.string.record_title);
-		// Usually not necessary, since we don't start up in this activity. But if the user turns
-		// off our permission to record and then resumes the app (something probably only a tester
-		// would do, but still...) the system apparently re-creates the activity without going
-		// through the normal startup steps. And we NEED this to be called.
 		ServiceLocator.getServiceLocator().init(this);
 
 		Intent intent = getIntent();
@@ -126,17 +114,18 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		assert extras != null;
 		BookInfo book = BundleCompat.getSerializable(extras, "bookInfo", BookInfo.class);
 		if (book != null) {
-			// invoked from chapter page
 			_chapNum = extras.getInt("chapter");
 			_bookNum = book.BookNumber;
 			_provider = book.getScriptProvider();
 			_activeLine = extras.getInt("line", 0);
-		} else {
-			// re-created, maybe after rotate, maybe eventually we start up here?
+		} else if (savedInstanceState != null) {
 			_chapNum = savedInstanceState.getInt(CHAP_NUM);
 			_bookNum = savedInstanceState.getInt(BOOK_NUM);
 			_activeLine = savedInstanceState.getInt(ACTIVE_LINE);
 			_provider = ServiceLocator.getServiceLocator().init(this).getScriptProvider();
+		} else {
+			finish();
+			return;
 		}
 		_lineCount = _provider.GetScriptLineCount(_bookNum, _chapNum);
 
@@ -174,38 +163,37 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		if (_lineCount > 0)
 			setActiveLine(_activeLine);
 		levelMeter = findViewById(R.id.levelMeter);
-		AudioManager amAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-		amAudioManager.setMode(AudioManager.MODE_IN_CALL); //possibly next test only valid while in this mode?
-		wasUsingSpeaker = amAudioManager.isSpeakerphoneOn();
-		amAudioManager.setMode(AudioManager.MODE_NORMAL);
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-		// The activity has become visible (it is now "resumed").
 		startMonitoring();
+
+		AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+		wasUsingSpeaker = am.isSpeakerphoneOn();
 		if (usingSpeaker) {
-			AudioManager amAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-			amAudioManager.setMode(AudioManager.MODE_IN_CALL);
-			amAudioManager.setSpeakerphoneOn(true);
+			am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+			am.setSpeakerphoneOn(true);
 		}
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-		stopMonitoring(); //  don't want to waste cycles monitoring while paused.
+		stopMonitoring();
+		stopPlaying();
+
 		BibleLocation location = new BibleLocation();
 		location.bookNumber = _bookNum;
 		location.chapterNumber = _chapNum;
 		location.lineNumber = _activeLine;
 		_provider.saveLocation(location);
-		if (usingSpeaker && !wasUsingSpeaker) {
-			AudioManager amAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-			amAudioManager.setMode(AudioManager.MODE_IN_CALL);
-			amAudioManager.setSpeakerphoneOn(false);
-			amAudioManager.setMode(AudioManager.MODE_NORMAL);
+
+		AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+		if (usingSpeaker) {
+			am.setSpeakerphoneOn(false);
+			am.setMode(AudioManager.MODE_NORMAL);
 		}
 	}
 
@@ -269,7 +257,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	static int getNewScrollPosition(int scrollPos, int height, int newLine, int[] tops) {
 		int newScrollPos = scrollPos;
 		int bottom = tops[newLine + 1];
-		int bottomNext = bottom; // bottom of next line (or current, if no next)
+		int bottomNext = bottom;
 		if (newLine < tops.length - 2) {
 			bottomNext = tops[newLine + 2];
 		}
@@ -279,7 +267,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			newScrollPos = bottomNext - height;
 		}
 		int top = tops[newLine];
-		int topPrev = top; // top of previous line (or current, if no previous line)
+		int topPrev = top;
 		if (newLine > 0) {
 			topPrev = tops[newLine - 1];
 		}
@@ -325,7 +313,6 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		if (waveRecorder != null)
 			waveRecorder.release();
 		waveRecorder = new WavAudioRecorder(AudioSource.MIC, 44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-		//waveRecorder.prepare(); no; this initializes (and so requires) output file.
 		waveRecorder.setMonitorListener(this);
 		waveRecorder.startMonitoring();
 	}
@@ -460,7 +447,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			}
 		}
 	}
-	
+
 	void stopRecording() {
 		long beginStop = System.currentTimeMillis();
 		synchronized (startingLock) {
@@ -547,7 +534,13 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 	private void stopPlaying() {
 		if (playButtonPlayer != null) {
-			playButtonPlayer.stop();
+			try {
+				if (playButtonPlayer.isPlaying()) {
+					playButtonPlayer.stop();
+				}
+			} catch (IllegalStateException e) {
+				Log.e("Player", "Error stopping audio", e);
+			}
 			playButtonPlayer.release();
 			playButtonPlayer = null;
 		}
@@ -578,13 +571,9 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		else if (itemId == R.id.speakers) {
 			usingSpeaker = !item.isChecked();
 			item.setChecked(usingSpeaker);
-			// To get the sound over the main speaker when a headset is plugged in, we need
-			// to pretend to be in a call and set speakerphone mode. Nasty thing to do,
-			// but our users want it...
-			AudioManager amAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-			amAudioManager.setMode(usingSpeaker ? AudioManager.MODE_IN_CALL : AudioManager.MODE_NORMAL);
-			amAudioManager.setSpeakerphoneOn(usingSpeaker);
-
+			AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+			am.setMode(usingSpeaker ? AudioManager.MODE_IN_COMMUNICATION : AudioManager.MODE_NORMAL);
+			am.setSpeakerphoneOn(usingSpeaker);
 		}
         return false;
     }
@@ -615,8 +604,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 	@Override
 	public void onCompletion(MediaPlayer mediaPlayer) {
-		playButtonPlayer.release();
-		playButtonPlayer = null;
+		stopPlaying();
 		playButton.setPlaying(false);
 		playButton.setButtonState(BtnState.Normal);
 		playButton.setIsDefault(false);

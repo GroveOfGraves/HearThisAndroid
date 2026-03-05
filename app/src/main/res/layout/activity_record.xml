@@ -12,11 +12,10 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <view class="org.sil.hearthis.LinesView"
+        <org.sil.hearthis.LinesView
             android:id="@+id/zoomView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:stretchColumns="*"
             android:layout_span="3">
             <ScrollView
                 android:id="@+id/textScrollView"
@@ -32,7 +31,7 @@
                     android:background="@color/mainBackground" >
                 </LinearLayout>
             </ScrollView>
-        </view>
+        </org.sil.hearthis.LinesView>
 
     </TableRow>
 
@@ -42,7 +41,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp" >
 
-        <view class="org.sil.hearthis.PlayButton"
+        <org.sil.hearthis.PlayButton
             android:id="@+id/playButton"
             android:layout_width="0dp"
             android:layout_height="100dp"
@@ -50,7 +49,7 @@
             android:background="@android:color/transparent"
             android:text="@string/Play" />
 
-        <view class="org.sil.hearthis.RecordButton"
+        <org.sil.hearthis.RecordButton
             android:id="@+id/recordButton"
             android:layout_width="0dp"
             android:layout_height="100dp"
@@ -58,7 +57,7 @@
             android:background="@android:color/transparent"
             android:text="@string/Record" />
 
-        <view  class="org.sil.hearthis.NextButton"
+        <org.sil.hearthis.NextButton
             android:id="@+id/nextButton"
             android:layout_width="0dp"
             android:layout_height="100dp"
@@ -73,8 +72,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingBottom="16dp">
-        <!-- the weird combination of width 0 and weight 1 makes it take up the whole width,
-        while width match_parent doesn't work in table row-->
         <org.sil.hearthis.LevelMeterView
             android:id="@+id/levelMeter"
             android:layout_height="20dp"
