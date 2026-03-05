@@ -18,11 +18,21 @@ public class SyncService extends Service {
     private static final String TAG = "SyncService";
     private static final String CHANNEL_ID = "SyncServiceChannel";
     private static final int NOTIFICATION_ID = 1;
+    
+    private static SyncService sInstance;
 
     public SyncService() {
     }
 
-    SyncServer _server;
+    private SyncServer _server;
+
+    public static SyncService getInstance() {
+        return sInstance;
+    }
+
+    public SyncServer getServer() {
+        return _server;
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -32,6 +42,7 @@ public class SyncService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        sInstance = this;
         createNotificationChannel();
         _server = new SyncServer(this);
     }
@@ -40,7 +51,9 @@ public class SyncService extends Service {
     public void onDestroy() {
         if (_server != null) {
             _server.stopThread();
+            _server = null;
         }
+        sInstance = null;
         super.onDestroy();
     }
 
@@ -67,17 +80,14 @@ public class SyncService extends Service {
                 startForeground(NOTIFICATION_ID, notification);
             }
         } catch (Exception e) {
-            // In Android 14+, the system may occasionally refuse to start a foreground service
-            // if the app is not in a state where it can start one (e.g. background).
             Log.e(TAG, "Failed to start foreground service", e);
-            // We don't crash, but the service won't have foreground priority.
         }
 
         if (_server != null) {
             _server.startThread();
         }
 
-        return START_NOT_STICKY; // Use NOT_STICKY as this service is tied to an active sync session
+        return START_NOT_STICKY;
     }
 
     @Override
@@ -85,9 +95,6 @@ public class SyncService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (fgsType == ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) {
                 Log.w(TAG, "SyncService timed out (6 hour limit reached). Cleaning up...");
-                if (_server != null) {
-                    _server.stopThread();
-                }
                 stopSelf();
             }
         }

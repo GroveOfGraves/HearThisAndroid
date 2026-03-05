@@ -1,7 +1,9 @@
 package org.sil.hearthis;
 
 import android.content.Context;
+import android.util.Log;
 import java.io.File;
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -14,17 +16,35 @@ import fi.iki.elonen.NanoHTTPD.Response;
  * Created by Thomson on 12/28/2014.
  */
 public class ListDirectoryHandler {
-    Context _parent;
-    public ListDirectoryHandler(Context parent)
-    {
+    private static final String TAG = "ListDirectoryHandler";
+    private final Context _parent;
+
+    public ListDirectoryHandler(Context parent) {
         _parent = parent;
     }
 
     public Response handle(NanoHTTPD.IHTTPSession session) {
         File baseDir = _parent.getExternalFilesDir(null);
+        if (baseDir == null) {
+            return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "External storage not available");
+        }
+
         String filePath = session.getParms().get("path");
-        String path = baseDir + "/" + filePath;
-        File file = new File(path);
+        if (filePath == null) {
+            filePath = "";
+        }
+
+        // Fix Path Traversal Vulnerability
+        File file = new File(baseDir, filePath);
+        try {
+            if (!file.getCanonicalPath().startsWith(baseDir.getCanonicalPath())) {
+                Log.w(TAG, "Attempted path traversal: " + filePath);
+                return NanoHTTPD.newFixedLengthResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "Access denied");
+            }
+        } catch (IOException e) {
+            return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "Error validating path");
+        }
+
         StringBuilder sb = new StringBuilder();
         if (file.isDirectory()) {
             File[] files = file.listFiles();
@@ -42,6 +62,8 @@ public class ListDirectoryHandler {
             }
             return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, sb.toString());
         } else {
+            // If it's not a directory, just return empty list or NOT_FOUND? 
+            // Original code returned empty string for non-directories.
             return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "");
         }
     }

@@ -14,7 +14,8 @@ import fi.iki.elonen.NanoHTTPD.Response;
 
 public class AcceptFileHandler {
     private static final String TAG = "AcceptFileHandler";
-    Context _parent;
+    private final Context _parent;
+    private IFileReceivedNotification listener;
 
     public AcceptFileHandler(Context parent) {
         _parent = parent;
@@ -22,15 +23,31 @@ public class AcceptFileHandler {
 
     public Response handle(NanoHTTPD.IHTTPSession session) {
         File baseDir = _parent.getExternalFilesDir(null);
+        if (baseDir == null) {
+            return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "External storage not available");
+        }
+
         String filePath = session.getParms().get("path");
         if (filePath != null) {
             filePath = filePath.replace('\\', '/');
+        } else {
+            return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "Missing path parameter");
         }
-        
+
+        // Fix Path Traversal Vulnerability
+        File file = new File(baseDir, filePath);
+        try {
+            if (!file.getCanonicalPath().startsWith(baseDir.getCanonicalPath())) {
+                Log.w(TAG, "Attempted path traversal: " + filePath);
+                return NanoHTTPD.newFixedLengthResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "Access denied");
+            }
+        } catch (IOException e) {
+            return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "Error validating path");
+        }
+
         if (listener != null)
             listener.receivingFile(filePath);
 
-        String result = "failure";
         Map<String, String> files = new HashMap<>();
         try {
             session.parseBody(files);
@@ -41,11 +58,7 @@ public class AcceptFileHandler {
                 contentOrPath = files.get("postData");
             }
 
-            if (contentOrPath != null && filePath != null) {
-                assert baseDir != null;
-                String path = baseDir.getAbsolutePath() + "/" + filePath;
-                File file = new File(path);
-                
+            if (contentOrPath != null) {
                 File dir = file.getParentFile();
                 if (dir != null && !dir.exists()) {
                     if (!dir.mkdirs()){
@@ -58,13 +71,9 @@ public class AcceptFileHandler {
                 // We also limit the length check for path strings to avoid ENAMETOOLONG on the exists() call.
                 boolean isPath = false;
                 if (contentOrPath.length() < 1024 && contentOrPath.startsWith("/")) {
-                    try {
-                        File srcFile = new File(contentOrPath);
-                        if (srcFile.exists() && srcFile.isFile()) {
-                            isPath = true;
-                        }
-                    } catch (Exception e) {
-                        // Not a valid path
+                    File srcFile = new File(contentOrPath);
+                    if (srcFile.exists() && srcFile.isFile()) {
+                        isPath = true;
                     }
                 }
 
@@ -75,16 +84,16 @@ public class AcceptFileHandler {
                         out.write(contentOrPath.getBytes(StandardCharsets.UTF_8));
                     }
                 }
-                Log.d(TAG, "Successfully saved file to: " + path);
-                result = "success";
+                Log.d(TAG, "Successfully saved file to: " + file.getAbsolutePath());
+                return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "success\n");
             } else {
-                Log.e(TAG, "No content found in request body or path is null");
+                Log.e(TAG, "No content found in request body");
+                return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "failure: no content\n");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to accept file: " + filePath, e);
+            return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "failure: " + e.getMessage() + "\n");
         }
-
-        return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, result + "\n");
     }
 
     private void copyFile(File src, File dst) throws IOException {
@@ -102,8 +111,7 @@ public class AcceptFileHandler {
         void receivingFile(String name);
     }
 
-    static IFileReceivedNotification listener;
-    public static void requestFileReceivedNotification(IFileReceivedNotification newListener) {
+    public void setListener(IFileReceivedNotification newListener) {
         listener = newListener;
     }
 }
