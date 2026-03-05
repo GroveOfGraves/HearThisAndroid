@@ -2,11 +2,10 @@ package org.sil.hearthis;
 
 import android.app.Activity;
 
-import java.io.File;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import Script.FileSystem;
-import Script.IFileSystem;
 import Script.IScriptProvider;
 import Script.Project;
 import Script.RealFileSystem;
@@ -33,7 +32,7 @@ public class ServiceLocator {
     // Returns this for convenient chaining.
     public ServiceLocator init(Activity activity) {
         if (externalFilesDirectory == null)
-            externalFilesDirectory = activity.getExternalFilesDir(null).toString();
+            externalFilesDirectory = Objects.requireNonNull(activity.getExternalFilesDir(null)).toString();
         return this;
     }
 

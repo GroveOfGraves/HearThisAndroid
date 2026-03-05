@@ -28,11 +28,10 @@ public class AcceptFileHandler {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "External storage not available");
         }
 
-        Map<String, List<String>> parameters = session.getParameters();
-        String filePath = null;
-        if (parameters.containsKey("path") && !parameters.get("path").isEmpty()) {
-            filePath = parameters.get("path").get(0).replace('\\', '/');
-        }
+        List<String> pathParams = session.getParameters().get("path");
+        String filePath = (pathParams != null && !pathParams.isEmpty())
+                ? pathParams.get(0).replace('\\', '/')
+                : null;
 
         if (filePath == null) {
             return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "Missing path parameter");
