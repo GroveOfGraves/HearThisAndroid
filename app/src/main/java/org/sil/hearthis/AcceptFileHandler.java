@@ -52,6 +52,7 @@ public class AcceptFileHandler {
         try {
             session.parseBody(files);
             
+            // NanoHTTPD might put the content directly in the map or provide a path to a temp file.
             String contentOrPath = files.get("content");
             if (contentOrPath == null) {
                 contentOrPath = files.get("postData");
@@ -60,13 +61,14 @@ public class AcceptFileHandler {
             if (contentOrPath != null) {
                 File dir = file.getParentFile();
                 if (dir != null && !dir.exists()) {
-                    if (!dir.mkdirs()) {
-                        Log.e(TAG, "Failed to create directories: " + dir.getAbsolutePath());
-                        return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "failure: could not create directory\n");
+                    if (!dir.mkdirs()){
+                        Log.e("Recorder","Error creating directory at " + dir.getAbsolutePath());
                     }
                 }
 
-                // Improve resource management and logic
+                // Check if it's a file path or raw content.
+                // Raw content (XML or info.txt) won't start with / and be a valid path.
+                // We also limit the length check for path strings to avoid ENAMETOOLONG on the exists() call.
                 boolean isPath = false;
                 if (contentOrPath.length() < 1024 && contentOrPath.startsWith("/")) {
                     File srcFile = new File(contentOrPath);

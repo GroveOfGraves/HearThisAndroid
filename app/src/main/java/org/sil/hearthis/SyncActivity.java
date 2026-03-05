@@ -2,7 +2,6 @@ package org.sil.hearthis;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
@@ -69,6 +68,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     TextView progressView;
 
     private ExecutorService cameraExecutor;
+    private static final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
     private BarcodeScanner barcodeScanner;
     private final Handler registrationHandler = new Handler(Looper.getMainLooper());
 
@@ -80,6 +80,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
         View syncLayout = findViewById(R.id.sync_layout);
         if (syncLayout != null) {
+            // Get original padding from XML to preserve it
             int paddingLeft = syncLayout.getPaddingLeft();
             int paddingTop = syncLayout.getPaddingTop();
             int paddingRight = syncLayout.getPaddingRight();
@@ -106,19 +107,16 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         previewView = findViewById(R.id.preview_view);
         previewView.setVisibility(View.INVISIBLE);
         continueButton.setEnabled(false);
-        continueButton.setOnClickListener(view -> {
-            // After sync, we often want to go back to the project selection if things changed,
-            // or just finish to return to the previous screen.
-            // The user mentioned "transition from sync view to book view".
-            // If finishing isn't enough, we could explicitly start ChooseBookActivity.
-            finish();
-        });
+        final SyncActivity thisActivity = this;
+        continueButton.setOnClickListener(view -> thisActivity.finish());
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
                 .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
                 .build();
         barcodeScanner = BarcodeScanning.getClient(options);
+
+        AcceptNotificationHandler.addNotificationListener(this);
     }
 
     private void requestNotificationPermissionAndStartSync() {
@@ -201,13 +199,14 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             SyncServer server = service.getServer();
             server.getAcceptFileHandler().setListener(null);
             server.getRequestFileHandler().setListener(null);
-            server.getAcceptNotificationHandler().removeNotificationListener(this);
+            AcceptNotificationHandler.removeNotificationListener(this);
         }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        AcceptNotificationHandler.removeNotificationListener(this);
         if (isFinishing()) {
             stopSyncServer();
         }
