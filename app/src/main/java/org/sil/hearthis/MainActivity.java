@@ -7,12 +7,12 @@ import Script.Project;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -23,7 +23,6 @@ import androidx.core.view.WindowInsetsCompat;
 
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -45,14 +44,10 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 		ServiceLocator.getServiceLocator().init(this);
-		Button sync = (Button) findViewById(R.id.mainSyncButton);
-		final MainActivity thisActivity = this; // required to use it in touch handler
-		sync.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				// When a sync completes we want to evaluate the results and launch the book chooser if appropriate
-				LaunchSyncActivity();
-			}
+		Button sync = findViewById(R.id.mainSyncButton);
+		sync.setOnClickListener(view -> {
+			// When a sync completes we want to evaluate the results and launch the book chooser if appropriate
+			LaunchSyncActivity();
 		});
 
 		if (requestRecordAudioPermission()) {
@@ -85,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
 				Manifest.permission.RECORD_AUDIO)
 				!= PackageManager.PERMISSION_GRANTED) {
 			// We don't yet have permission.
-			// We will ask again, if necessary, when the user presses the record button.
+			// We will ask again if necessary, when the user presses the record button.
 			// But we really want it now so the volume meter can work. Explain this while requesting.
 			// Using a toast didn't work.
 			//Toast.makeText(MainActivity.this, R.string.record_for_volume, Toast.LENGTH_LONG).show();
@@ -96,20 +91,12 @@ public class MainActivity extends AppCompatActivity {
 				new AlertDialog.Builder(this)
 						.setTitle(R.string.need_permissions)
 						.setMessage(R.string.record_for_volume)
-						.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								ActivityCompat.requestPermissions(MainActivity.this,
-										new String[]{Manifest.permission.RECORD_AUDIO},
-										MY_PERMISSIONS_REQUEST_RECORD_AUDIO);
-							}
-						})
-						.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-							@Override
-							public void onClick(DialogInterface dialog, int which) {
-								// No permission, proceed as usual
-								launchChooseBookIfProject();
-							}
+						.setPositiveButton(R.string.ok, (dialog, which) -> ActivityCompat.requestPermissions(MainActivity.this,
+								new String[]{Manifest.permission.RECORD_AUDIO},
+								MY_PERMISSIONS_REQUEST_RECORD_AUDIO))
+						.setNegativeButton(R.string.cancel, (dialog, which) -> {
+							// No permission, proceed as usual
+							launchChooseBookIfProject();
 						})
 						.create().show();
 			} else {
@@ -133,24 +120,15 @@ public class MainActivity extends AppCompatActivity {
 	// permission to record audio. Once we have a response, we move to the appropriate activity,
 	// depending on whether the user has previously selected a project and passage.
 	@Override
-	public void onRequestPermissionsResult(
-			int requestCode,
-			String permissions[],
-			int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-			case MY_PERMISSIONS_REQUEST_RECORD_AUDIO:
-				if (grantResults.length > 0) {
-					if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-						// We have our essential permission. Nothing special to do, just means the
-						// volume meter will start working
-					} else {
-						// The user denied permission to record audio. We'll ask again if they try
-						// to record.
-					}
-					// Either way, once the user closes the dialog, show the appropriate next activity.
-					launchChooseBookIfProject();
-				}
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+		if (requestCode == MY_PERMISSIONS_REQUEST_RECORD_AUDIO) {
+			if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+				// Permission granted. The volume meter will now work.
+			}
+			// Proceed to the next activity regardless of the result.
+			launchChooseBookIfProject();
 		}
 	}
 
@@ -170,18 +148,17 @@ public class MainActivity extends AppCompatActivity {
 		return fs.getDirectories(rootDir);
 	}
 
-	private boolean launchChooseBookIfProject() {
+	private void launchChooseBookIfProject() {
 		ArrayList<String> rootDirs = getProjectRootDirectories();
 		if (rootDirs.isEmpty()) {
-			return false; // Leave the main activity active (allows user to sync a project).
+			return; // Leave the main activity active (allows user to sync a project).
 		}
 		if (rootDirs.size() > 1) // Todo: and we haven't remembered a location!
 		{
 			startActivity(new Intent(this, ChooseProjectActivity.class));
-			return true;
+			return;
 		}
 		launchProject(this);
-		return true;
 	}
 
 	public static void launchProject(Activity parent) {

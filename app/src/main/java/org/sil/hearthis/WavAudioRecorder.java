@@ -14,6 +14,7 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder.AudioSource;
 import android.util.Log;
 
+
 public class WavAudioRecorder {
 	private final static int[] sampleRates = {44100, 22050, 11025, 8000};
 
@@ -28,7 +29,7 @@ public class WavAudioRecorder {
 				sampleRates[i],
 				AudioFormat.CHANNEL_IN_MONO,
 				AudioFormat.ENCODING_PCM_16BIT);
-		} while((++i<sampleRates.length) & !(result.getState() == WavAudioRecorder.State.INITIALIZING));
+		} while((++i<sampleRates.length) && !(result.getState() == WavAudioRecorder.State.INITIALIZING));
 		return result;
 	}
 
@@ -49,46 +50,41 @@ public class WavAudioRecorder {
 	* ERROR : reconstruction needed
 	* STOPPED: reset needed
 	*/
-	public enum State {INITIALIZING, READY, MONITORING, RECORDING, ERROR, STOPPED};
-
-	public static final boolean RECORDING_UNCOMPRESSED = true;
-	public static final boolean RECORDING_COMPRESSED = false;
+	public enum State {INITIALIZING, READY, MONITORING, RECORDING, ERROR, STOPPED}
 
 	// The interval in which the recorded samples are output to the file
 	// Used only in uncompressed mode
 	private static final int TIMER_INTERVAL = 120;
 
 	// Recorder used for uncompressed recording
-	private AudioRecord     audioRecorder = null;
+	private AudioRecord audioRecorder = null;
 
 	// Output file path
-	private String          filePath = null;
+	private String filePath = null;
 
 	// Recorder state; see State
-	private State          	state;
+	private State state;
 
-	private boolean WasMonitoring; // True while recording if we were previously monitoring.
-
-	// File writer (only in uncompressed mode)
+    // File writer (only in uncompressed mode)
 	private RandomAccessFile randomAccessWriter;
 
 	// Number of channels, sample rate, sample size(size in bits), buffer size, audio source, sample size(see AudioFormat)
-	private short                    nChannels;
-	private int                      sRate;
-	private short                    mBitsPersample;
-	private int                      mBufferSize;
-	private int                      mAudioSource;
-	private int                      aFormat;
+	private short nChannels;
+	private int sRate;
+	private short mBitsPersample;
+	private int mBufferSize;
+	private int mAudioSource;
+	private int aFormat;
 
 	// Number of frames/samples written to file on each output(only in uncompressed mode)
-	private int                      mPeriodInFrames;
+	private int mPeriodInFrames;
 
 	// Buffer for output(only in uncompressed mode)
-	private byte[]                   buffer;
+	private byte[] buffer;
 
 	// Number of bytes written to file after header(only in uncompressed mode)
 	// after stop() is called, this size is written to the header/data chunk in the wave file
-	private int                      payloadSize;
+	private int payloadSize;
 
 	/**
 	*
@@ -102,7 +98,7 @@ public class WavAudioRecorder {
 	}
 
 
-	private AudioRecord.OnRecordPositionUpdateListener updateListener = new AudioRecord.OnRecordPositionUpdateListener() {
+	private final AudioRecord.OnRecordPositionUpdateListener updateListener = new AudioRecord.OnRecordPositionUpdateListener() {
 		//	periodic updates on the progress of the record head
 		public void onPeriodicNotification(AudioRecord recorder) {
 			if (State.ERROR == state)
@@ -119,20 +115,19 @@ public class WavAudioRecorder {
 				//  Report it to the app.
 				short maxAmp = 0;
 				for (int i = 0; i < numOfBytes / 2; i++) {
-					short current = (short) Math.abs((short) (buffer[i * 2 + 1] << 8 | buffer[i * 2]));
+					short current = (short) Math.abs((short) (buffer[i * 2 + 1] << 8 | (buffer[i * 2] & 0xFF)));
 					if (current > maxAmp) maxAmp = current;
 				}
 				monitorListener.maxLevel(maxAmp);
 			}
-			if (state.RECORDING != state) {
+			if (State.RECORDING != state) {
 				return;
 			}
 			try {
 				randomAccessWriter.write(buffer); 		  // write audio data to file
 				payloadSize += buffer.length;
 			} catch (IOException e) {
-				Log.e(WavAudioRecorder.class.getName(), "Error occured in updateListener, recording is aborted");
-				e.printStackTrace();
+				Log.e(WavAudioRecorder.class.getName(), "Error occured in updateListener, recording is aborted", e);
 			}
 		}
 		//	reached a notification marker set by setNotificationMarkerPosition(int)
@@ -140,10 +135,7 @@ public class WavAudioRecorder {
 		}
 	};
 	/**
-	 *
-	 *
 	 * Default constructor
-	 *
 	 * Instantiates a new recorder
 	 * In case of errors, no exception is thrown, but the state is set to ERROR
 	 *
@@ -167,14 +159,14 @@ public class WavAudioRecorder {
 			sRate   = sampleRate;
 			aFormat = audioFormat;
 
-			mPeriodInFrames = sampleRate * TIMER_INTERVAL / 1000;		//?
-			mBufferSize = mPeriodInFrames * 2  * nChannels * mBitsPersample / 8;		//?
+			mPeriodInFrames = sampleRate * TIMER_INTERVAL / 1000;
+			mBufferSize = mPeriodInFrames * 2  * nChannels * mBitsPersample / 8;
 			if (mBufferSize < AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)) {
 				// Check to make sure buffer size is not smaller than the smallest allowed one
 				mBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat);
 				// Set frame period and timer interval accordingly
 				mPeriodInFrames = mBufferSize / ( 2 * mBitsPersample * nChannels / 8 );
-				Log.w(WavAudioRecorder.class.getName(), "Increasing buffer size to " + Integer.toString(mBufferSize));
+				Log.w(WavAudioRecorder.class.getName(), "Increasing buffer size to " + mBufferSize);
 			}
 
 			audioRecorder = new AudioRecord(audioSource, sampleRate, channelConfig, audioFormat, mBufferSize);
@@ -187,11 +179,7 @@ public class WavAudioRecorder {
 			filePath = null;
 			state = State.INITIALIZING;
 		} catch (Exception e) {
-			if (e.getMessage() != null) {
-				Log.e(WavAudioRecorder.class.getName(), e.getMessage());
-			} else {
-				Log.e(WavAudioRecorder.class.getName(), "Unknown error occured while initializing recording");
-			}
+			Log.e(WavAudioRecorder.class.getName(), e.getMessage() != null ? e.getMessage() : "Unknown error occured while initializing recording", e);
 			if (audioRecorder != null) {
 				audioRecorder.release();
 				audioRecorder = null;
@@ -203,7 +191,7 @@ public class WavAudioRecorder {
 	/**
 	 * Sets output file path, call directly after construction/reset.
 	 *
-	 * @param output file path
+	 * @param argPath output file path
 	 *
 	 */
 	public void setOutputFile(String argPath) {
@@ -212,28 +200,23 @@ public class WavAudioRecorder {
 				filePath = argPath;
 			}
 		} catch (Exception e) {
-			if (e.getMessage() != null) {
-				Log.e(WavAudioRecorder.class.getName(), e.getMessage());
-			} else {
-				Log.e(WavAudioRecorder.class.getName(), "Unknown error occured while setting output path");
-			}
+			Log.e(WavAudioRecorder.class.getName(), e.getMessage() != null ? e.getMessage() : "Unknown error occured while setting output path", e);
 			state = State.ERROR;
 		}
 	}
 
 
 	/**
+	 * Prepares the recorder for recording, in case the recorder is not in the INITIALIZING state and the file path was not set
+	 * the recorder is set to the ERROR state, which makes a reconstruction necessary.
+	 * In case uncompressed recording is toggled, the header of the wave file is written.
+	 * In case of an exception, the state is changed to ERROR
 	 *
-	* Prepares the recorder for recording, in case the recorder is not in the INITIALIZING state and the file path was not set
-	* the recorder is set to the ERROR state, which makes a reconstruction necessary.
-	* In case uncompressed recording is toggled, the header of the wave file is written.
-	* In case of an exception, the state is changed to ERROR
-	*
-	*/
+	 */
 	public void prepare() {
 		try {
 			if (state == State.INITIALIZING) {
-				if ((audioRecorder.getState() == AudioRecord.STATE_INITIALIZED) & (filePath != null)) {
+				if ((audioRecorder.getState() == AudioRecord.STATE_INITIALIZED) && (filePath != null)) {
 					// write file header
 					randomAccessWriter = new RandomAccessFile(filePath, "rw");
 					randomAccessWriter.setLength(0); // Set file length to 0, to prevent unexpected behavior in case the file already existed
@@ -262,19 +245,13 @@ public class WavAudioRecorder {
 				state = State.ERROR;
 			}
 		} catch(Exception e) {
-			if (e.getMessage() != null) {
-				Log.e(WavAudioRecorder.class.getName(), e.getMessage());
-			} else {
-				Log.e(WavAudioRecorder.class.getName(), "Unknown error occured in prepare()");
-			}
+			Log.e(WavAudioRecorder.class.getName(), e.getMessage() != null ? e.getMessage() : "Unknown error occured in prepare()", e);
 			state = State.ERROR;
 		}
 	}
 
 	/**
-	 *
-	 *
-	 *  Releases the resources associated with this class, and removes the unnecessary files, when necessary
+	 * Releases the resources associated with this class, and removes the unnecessary files, when necessary
 	 *
 	 */
 	public void release() {
@@ -290,7 +267,10 @@ public class WavAudioRecorder {
 					Log.e(WavAudioRecorder.class.getName(), "I/O exception occured while closing output file");
 				}
 				if (filePath != null) {
-					(new File(filePath)).delete();
+					File file = new File(filePath);
+					if (!file.delete()) {
+						Log.w(WavAudioRecorder.class.getName(), "Failed to delete file: " + filePath);
+					}
 				}
 			}
 		}
@@ -302,8 +282,6 @@ public class WavAudioRecorder {
 	}
 
 	/**
-	 *
-	 *
 	 * Resets the recorder to the INITIALIZING state, as if it was just created.
 	 * In case the class was in RECORDING state, the recording is stopped.
 	 * In case of exceptions the class is set to the ERROR state.
@@ -324,24 +302,20 @@ public class WavAudioRecorder {
 				state = State.INITIALIZING;
 			}
 		} catch (Exception e) {
-			Log.e(WavAudioRecorder.class.getName(), e.getMessage());
+			Log.e(WavAudioRecorder.class.getName(), e.getMessage() != null ? e.getMessage() : "Reset failed", e);
 			state = State.ERROR;
 		}
 	}
 
 	/**
-	 *
-	 *
 	 * Starts the recording, and sets the state to RECORDING.
 	 * Call after prepare().
 	 *
 	 */
 	public void start() {
-		WasMonitoring = false;
 		if (state == State.MONITORING) {
 			audioRecorder.stop();
 			state = State.READY;
-			WasMonitoring = true;
 		}
 		if (state == State.READY) {
 			payloadSize = 0;
@@ -349,14 +323,12 @@ public class WavAudioRecorder {
 			audioRecorder.read(buffer, 0, buffer.length);	//[TODO: is this necessary]read the existing data in audio hardware, but don't do anything
 			state = State.RECORDING;
 		} else {
-			Log.e(WavAudioRecorder.class.getName(), "start() called on illegal state");
+			Log.e(WavAudioRecorder.class.getName(), "start() called on illegal state: " + state);
 			state = State.ERROR;
 		}
 	}
 
 	/**
-	 *
-	 *
 	 * Starts the recording, and sets the state to RECORDING.
 	 * Call after prepare().
 	 *
@@ -368,14 +340,12 @@ public class WavAudioRecorder {
 			audioRecorder.read(buffer, 0, buffer.length);	//[TODO: is this necessary]read the existing data in audio hardware, but don't do anything
 			state = State.MONITORING;
 		} else {
-			Log.e(WavAudioRecorder.class.getName(), "startMonitoring() called on illegal state");
+			Log.e(WavAudioRecorder.class.getName(), "startMonitoring() called on illegal state: " + state);
 			state = State.ERROR;
 		}
 	}
 
 	/**
-	 *
-	 *
 	 *  Stops the recording, and sets the state to STOPPED.
 	 * In case of further usage, a reset is needed.
 	 * Also finalizes the wave file in case of uncompressed recording.
