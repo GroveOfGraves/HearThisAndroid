@@ -4,11 +4,15 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+import android.view.Menu;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -26,12 +30,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import android.util.Log;
-import android.view.Menu;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
-
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
@@ -46,7 +44,6 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -68,7 +65,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     TextView progressView;
 
     private ExecutorService cameraExecutor;
-    private static final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
     private BarcodeScanner barcodeScanner;
     private final Handler registrationHandler = new Handler(Looper.getMainLooper());
 
@@ -115,8 +111,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
                 .build();
         barcodeScanner = BarcodeScanning.getClient(options);
-
-        AcceptNotificationHandler.addNotificationListener(this);
     }
 
     private void requestNotificationPermissionAndStartSync() {
@@ -199,14 +193,13 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             SyncServer server = service.getServer();
             server.getAcceptFileHandler().setListener(null);
             server.getRequestFileHandler().setListener(null);
-            AcceptNotificationHandler.removeNotificationListener(this);
+            server.getAcceptNotificationHandler().removeNotificationListener(this);
         }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        AcceptNotificationHandler.removeNotificationListener(this);
         if (isFinishing()) {
             stopSyncServer();
         }
@@ -297,10 +290,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
             ipView.setText(contents);
             previewView.setVisibility(View.INVISIBLE);
             
-            SendMessage sendMessageTask = new SendMessage();
-            sendMessageTask.ourIpAddress = getOurIpAddress();
-            sendMessageTask.desktopIpAddress = contents;
-            sendMessageTask.execute();
+            sendRegistrationMessage(contents);
             
             ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
             cameraProviderFuture.addListener(() -> {
@@ -312,6 +302,19 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 }
             }, ContextCompat.getMainExecutor(this));
         });
+    }
+
+    private void sendRegistrationMessage(final String desktopIpAddress) {
+        final String ourIpAddress = getOurIpAddress();
+        new Thread(() -> {
+            try (DatagramSocket socket = new DatagramSocket()) {
+                byte[] data = ("HearThisAndroidServer:" + ourIpAddress).getBytes(StandardCharsets.UTF_8);
+                DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(desktopIpAddress), 8087);
+                socket.send(packet);
+            } catch (IOException e) {
+                Log.e(TAG, "Error sending registration packet", e);
+            }
+        }).start();
     }
 
     @SuppressLint("MissingPermission")
@@ -333,76 +336,42 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         }
     }
 
+    @Override
+    public void onNotification(String message) {
+        Log.d(TAG, "Notification received: " + message);
+        runOnUiThread(() -> {
+            progressView.setText(R.string.sync_success);
+            continueButton.setEnabled(true);
+        });
+    }
+
+    @Override
+    public void receivingFile(String path) {
+        Log.d(TAG, "File received: " + path);
+        runOnUiThread(() -> progressView.setText(getString(R.string.receiving_file, path)));
+    }
+
+    @Override
+    public void sendingFile(String path) {
+        Log.d(TAG, "File sent: " + path);
+        runOnUiThread(() -> progressView.setText(getString(R.string.sending_file, path)));
+    }
+
     private String getOurIpAddress() {
         try {
-            Enumeration<NetworkInterface> enumNetworkInterfaces = NetworkInterface.getNetworkInterfaces();
-            while (enumNetworkInterfaces.hasMoreElements()) {
-                NetworkInterface networkInterface = enumNetworkInterfaces.nextElement();
-                Enumeration<InetAddress> enumInetAddress = networkInterface.getInetAddresses();
-                while (enumInetAddress.hasMoreElements()) {
-                    InetAddress inetAddress = enumInetAddress.nextElement();
-                    if (inetAddress.isSiteLocalAddress()) {
-                        return inetAddress.getHostAddress();
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    String hostAddress = inetAddress.getHostAddress();
+                    if (!inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress() && hostAddress != null && hostAddress.contains(".")) {
+                        return hostAddress;
                     }
                 }
             }
-        } catch (SocketException e) {
-            Log.e(TAG, "Error getting IP address", e);
-            return getString(R.string.ip_error, e.toString());
+        } catch (SocketException ex) {
+            Log.e(TAG, ex.toString());
         }
-        return "";
-    }
-
-    @Override
-    public void onNotification(String message) {
-        SyncService service = SyncService.getInstance();
-        if (service != null && service.getServer() != null) {
-            service.getServer().getAcceptNotificationHandler().removeNotificationListener(this);
-        }
-        setProgress(getString(R.string.sync_success));
-        runOnUiThread(() -> continueButton.setEnabled(true));
-    }
-
-    void setProgress(final String text) {
-        runOnUiThread(() -> progressView.setText(text));
-    }
-
-    private long lastProgressTime = 0;
-
-    @Override
-    public void receivingFile(final String name) {
-        long now = System.currentTimeMillis();
-        if (now - lastProgressTime < 1000)
-            return;
-        lastProgressTime = now;
-        setProgress(getString(R.string.receiving_file, name));
-    }
-
-    @Override
-    public void sendingFile(final String name) {
-        long now = System.currentTimeMillis();
-        if (now - lastProgressTime < 1000)
-            return;
-        lastProgressTime = now;
-        setProgress(getString(R.string.sending_file, name));
-    }
-
-    private static class SendMessage extends AsyncTask<Void, Void, Void> {
-        public String ourIpAddress;
-        public String desktopIpAddress;
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            if (ourIpAddress == null || desktopIpAddress == null) return null;
-            try (DatagramSocket socket = new DatagramSocket()) {
-                InetAddress receiverAddress = InetAddress.getByName(desktopIpAddress);
-                byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
-                socket.send(packet);
-            } catch (IOException e) {
-                Log.e(TAG, "Error sending UDP packet", e);
-            }
-            return null;
-        }
+        return null;
     }
 }
