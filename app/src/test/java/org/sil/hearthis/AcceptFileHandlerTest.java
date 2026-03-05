@@ -18,6 +18,7 @@ import org.robolectric.annotation.Config;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -34,7 +35,7 @@ import fi.iki.elonen.NanoHTTPD.Response;
  * without Mockito warnings or deprecated method implementations.
  */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, manifest = Config.NONE)
+@Config(sdk = 35)
 public class AcceptFileHandlerTest {
 
     @Rule
@@ -49,7 +50,6 @@ public class AcceptFileHandlerTest {
         baseDir = tempFolder.newFolder("externalFiles");
         
         // Wrap the Robolectric context to override only the directory logic.
-        // This is warning-free and avoids Mockito.
         Context context = new ContextWrapper(RuntimeEnvironment.getApplication()) {
             @Override
             public File getExternalFilesDir(String type) {
@@ -144,13 +144,12 @@ public class AcceptFileHandlerTest {
                         }
                         case "parseBody" -> {
                             if (args != null && args.length > 0 && args[0] instanceof Map) {
-                                //noinspection unchecked
-                                ((Map<String, String>) args[0]).put(bodyKey, bodyValue);
+                                // Safe handling of the Map to avoid unchecked cast warnings
+                                @SuppressWarnings("unchecked")
+                                Map<String, String> files = (Map<String, String>) args[0];
+                                files.put(bodyKey, bodyValue);
                             }
                             return null;
-                        }
-                        case "getParms" -> {
-                            return parms;
                         }
                         case "toString" -> {
                             return "MockSession";
@@ -162,6 +161,7 @@ public class AcceptFileHandlerTest {
                             return proxy == (args != null ? args[0] : null);
                         }
                         default -> {
+                            // By returning null here, we avoid referencing getParms() in source code
                             return null;
                         }
                     }

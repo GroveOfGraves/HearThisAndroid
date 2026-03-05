@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config;
 import Script.BookInfo;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35, manifest = Config.NONE)
+@Config(sdk = 35)
 public class BookButtonTest {
 
     private Context context;
