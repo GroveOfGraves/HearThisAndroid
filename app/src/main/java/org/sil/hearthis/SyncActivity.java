@@ -4,8 +4,11 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -67,7 +70,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     private ExecutorService cameraExecutor;
     private static final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
     private BarcodeScanner barcodeScanner;
-    private ProcessCameraProvider cameraProvider;
+    private final Handler registrationHandler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,6 +143,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     private void startSyncServer() {
         Intent serviceIntent = new Intent(this, SyncService.class);
         startService(serviceIntent);
+        startRegistrationRetry();
     }
 
     private void stopSyncServer() {
@@ -150,8 +154,53 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     @Override
     protected void onResume() {
         super.onResume();
-        AcceptFileHandler.requestFileReceivedNotification(this);
-        RequestFileHandler.requestFileSentNotification((this));
+        startRegistrationRetry();
+    }
+
+    @Override
+    protected void onPause() {
+        registrationHandler.removeCallbacks(registrationRunnable);
+        unregisterListeners();
+        super.onPause();
+    }
+
+    private final Runnable registrationRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (registerListeners()) {
+                Log.d(TAG, "Successfully registered sync listeners");
+            } else {
+                Log.d(TAG, "SyncService not ready yet, retrying registration...");
+                registrationHandler.postDelayed(this, 500);
+            }
+        }
+    };
+
+    private void startRegistrationRetry() {
+        registrationHandler.removeCallbacks(registrationRunnable);
+        registrationHandler.post(registrationRunnable);
+    }
+
+    private boolean registerListeners() {
+        SyncService service = SyncService.getInstance();
+        if (service != null && service.getServer() != null) {
+            SyncServer server = service.getServer();
+            server.getAcceptFileHandler().setListener(this);
+            server.getRequestFileHandler().setListener(this);
+            server.getAcceptNotificationHandler().addNotificationListener(this);
+            return true;
+        }
+        return false;
+    }
+
+    private void unregisterListeners() {
+        SyncService service = SyncService.getInstance();
+        if (service != null && service.getServer() != null) {
+            SyncServer server = service.getServer();
+            server.getAcceptFileHandler().setListener(null);
+            server.getRequestFileHandler().setListener(null);
+            AcceptNotificationHandler.removeNotificationListener(this);
+        }
     }
 
     @Override
@@ -178,17 +227,9 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                         String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
             }
         });
-        
-        networkExecutor.execute(() -> {
-            String ourIpAddress = getOurIpAddress();
-            runOnUiThread(() -> {
-                TextView ourIpView = findViewById(R.id.our_ip_address);
-                if (ourIpView != null) {
-                    ourIpView.setText(ourIpAddress);
-                }
-            });
-        });
-        
+        String ourIpAddress = getOurIpAddress();
+        TextView ourIpView = findViewById(R.id.our_ip_address);
+        ourIpView.setText(ourIpAddress);
         return true;
     }
 
@@ -200,7 +241,7 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
         cameraProviderFuture.addListener(() -> {
             try {
-                cameraProvider = cameraProviderFuture.get();
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
 
                 Preview preview = new Preview.Builder().build();
                 preview.setSurfaceProvider(previewView.getSurfaceProvider());
@@ -248,29 +289,28 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     }
 
     private void handleBarcode(Barcode barcode) {
-        String desktopIpAddress = barcode.getDisplayValue();
-        if (desktopIpAddress == null) return;
+        String contents = barcode.getDisplayValue();
+        if (contents == null) return;
         
         scanning = false;
         runOnUiThread(() -> {
-            ipView.setText(desktopIpAddress);
+            ipView.setText(contents);
             previewView.setVisibility(View.INVISIBLE);
             
-            if (cameraProvider != null) {
-                cameraProvider.unbindAll();
-            }
-
-            networkExecutor.execute(() -> {
-                final String ourIpAddress = getOurIpAddress();
-                try (DatagramSocket socket = new DatagramSocket()) {
-                    InetAddress receiverAddress = InetAddress.getByName(desktopIpAddress);
-                    byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
-                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
-                    socket.send(packet);
-                } catch (IOException e) {
-                    Log.e(TAG, "Failed to send UDP packet", e);
+            SendMessage sendMessageTask = new SendMessage();
+            sendMessageTask.ourIpAddress = getOurIpAddress();
+            sendMessageTask.desktopIpAddress = contents;
+            sendMessageTask.execute();
+            
+            ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+            cameraProviderFuture.addListener(() -> {
+                try {
+                    ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                    cameraProvider.unbindAll();
+                } catch (ExecutionException | InterruptedException e) {
+                    Log.e(TAG, "Failed to unbind camera", e);
                 }
-            });
+            }, ContextCompat.getMainExecutor(this));
         });
     }
 
@@ -294,7 +334,6 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     }
 
     private String getOurIpAddress() {
-        String ip = "";
         try {
             Enumeration<NetworkInterface> enumNetworkInterfaces = NetworkInterface.getNetworkInterfaces();
             while (enumNetworkInterfaces.hasMoreElements()) {
@@ -308,15 +347,18 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
                 }
             }
         } catch (SocketException e) {
-            Log.e(TAG, "Failed to get IP address", e);
-            ip = getString(R.string.ip_error, e.toString());
+            Log.e(TAG, "Error getting IP address", e);
+            return getString(R.string.ip_error, e.toString());
         }
-        return ip;
+        return "";
     }
 
     @Override
     public void onNotification(String message) {
-        // No need to unregister here as onDestroy handles it safely
+        SyncService service = SyncService.getInstance();
+        if (service != null && service.getServer() != null) {
+            service.getServer().getAcceptNotificationHandler().removeNotificationListener(this);
+        }
         setProgress(getString(R.string.sync_success));
         runOnUiThread(() -> continueButton.setEnabled(true));
     }
@@ -325,21 +367,42 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         runOnUiThread(() -> progressView.setText(text));
     }
 
-    Date lastProgress = new Date();
+    private long lastProgressTime = 0;
 
     @Override
     public void receivingFile(final String name) {
-        if (new Date().getTime() - lastProgress.getTime() < 1000)
+        long now = System.currentTimeMillis();
+        if (now - lastProgressTime < 1000)
             return;
-        lastProgress = new Date();
+        lastProgressTime = now;
         setProgress(getString(R.string.receiving_file, name));
     }
 
     @Override
     public void sendingFile(final String name) {
-        if (new Date().getTime() - lastProgress.getTime() < 1000)
+        long now = System.currentTimeMillis();
+        if (now - lastProgressTime < 1000)
             return;
-        lastProgress = new Date();
+        lastProgressTime = now;
         setProgress(getString(R.string.sending_file, name));
+    }
+
+    private static class SendMessage extends AsyncTask<Void, Void, Void> {
+        public String ourIpAddress;
+        public String desktopIpAddress;
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            if (ourIpAddress == null || desktopIpAddress == null) return null;
+            try (DatagramSocket socket = new DatagramSocket()) {
+                InetAddress receiverAddress = InetAddress.getByName(desktopIpAddress);
+                byte[] buffer = ourIpAddress.getBytes(StandardCharsets.UTF_8);
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, receiverAddress, 11007);
+                socket.send(packet);
+            } catch (IOException e) {
+                Log.e(TAG, "Error sending UDP packet", e);
+            }
+            return null;
+        }
     }
 }

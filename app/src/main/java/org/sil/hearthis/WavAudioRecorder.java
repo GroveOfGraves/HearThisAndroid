@@ -17,10 +17,13 @@ import android.util.Log;
 public class WavAudioRecorder {
 	private final static int[] sampleRates = {44100, 22050, 11025, 8000};
 
-	public static WavAudioRecorder getInstanse() {
+	public static WavAudioRecorder getInstance() {
 		WavAudioRecorder result = null;
 		int i=0;
 		do {
+			if (result != null) {
+				result.release();
+			}
 			result = new WavAudioRecorder(AudioSource.MIC,
 				sampleRates[i],
 				AudioFormat.CHANNEL_IN_MONO,
@@ -189,6 +192,10 @@ public class WavAudioRecorder {
 			} else {
 				Log.e(WavAudioRecorder.class.getName(), "Unknown error occured while initializing recording");
 			}
+			if (audioRecorder != null) {
+				audioRecorder.release();
+				audioRecorder = null;
+			}
 			state = State.ERROR;
 		}
 	}
@@ -271,21 +278,26 @@ public class WavAudioRecorder {
 	 *
 	 */
 	public void release() {
-		if (state == State.RECORDING) {
+		if (state == State.RECORDING || state == State.MONITORING) {
 			stop();
 		} else {
 			if (state == State.READY){
 				try {
-					randomAccessWriter.close(); // Remove prepared file
+					if (randomAccessWriter != null) {
+						randomAccessWriter.close(); // Remove prepared file
+					}
 				} catch (IOException e) {
 					Log.e(WavAudioRecorder.class.getName(), "I/O exception occured while closing output file");
 				}
-				(new File(filePath)).delete();
+				if (filePath != null) {
+					(new File(filePath)).delete();
+				}
 			}
 		}
 
 		if (audioRecorder != null) {
 			audioRecorder.release();
+			audioRecorder = null;
 		}
 	}
 
@@ -385,8 +397,11 @@ public class WavAudioRecorder {
 				state = State.ERROR;
 			}
 			state = State.STOPPED;
+		} else if (state == State.MONITORING) {
+			audioRecorder.stop();
+			state = State.STOPPED;
 		} else {
-			Log.e(WavAudioRecorder.class.getName(), "stop() called on illegal state");
+			Log.e(WavAudioRecorder.class.getName(), "stop() called on " + state + " state");
 			state = State.ERROR;
 		}
 	}
