@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -28,6 +29,10 @@ public class ChooseBookActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
+        // Explicitly set dark icons for the white status bar when edge-to-edge is enabled
+        new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+                .setAppearanceLightStatusBars(false);
+        
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_choose_book);
 

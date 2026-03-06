@@ -9,8 +9,10 @@ import android.os.Bundle;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
+import androidx.core.os.BundleCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,6 +25,10 @@ public class ChooseChapterActivity extends AppCompatActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		EdgeToEdge.enable(this);
+		// Explicitly set dark icons for the white status bar when edge-to-edge is enabled
+		new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+				.setAppearanceLightStatusBars(false);
+
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_chapters);
 
@@ -40,7 +46,7 @@ public class ChooseChapterActivity extends AppCompatActivity {
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
         assert extras != null;
-        final BookInfo book = (BookInfo)extras.get("bookInfo");
+        final BookInfo book = BundleCompat.getSerializable(extras, "bookInfo", BookInfo.class);
 		
 		TextView bookBox = findViewById(R.id.bookNameText);
         assert book != null;
@@ -64,6 +70,5 @@ public class ChooseChapterActivity extends AppCompatActivity {
 			});
 			chapsFlow.addView(chapButton);
 		}
-
 	}
 }
