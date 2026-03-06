@@ -1,11 +1,10 @@
 package org.sil.hearthis;
 
-import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Map;
 
-import Script.BibleLocation;
 import Script.IScriptProvider;
+import Script.BibleLocation;
 import Script.ScriptLine;
 
 /**
@@ -23,10 +22,15 @@ public class TestScriptProvider implements IScriptProvider {
         return 0;
     }
 
-    Map<Integer, Integer> BookTranslatedLineCounts = new HashMap<Integer, Integer>();
+    Map<Integer, Integer> BookTranslatedLineCounts = new HashMap<>();
+    Map<Integer, Integer> BookScriptLineCounts = new HashMap<>();
 
     public void setTranslatedBookCount(int bookNumber, int val) {
         BookTranslatedLineCounts.put(bookNumber, val);
+    }
+
+    public void setScriptLineCount(int bookNumber, int val) {
+        BookScriptLineCounts.put(bookNumber, val);
     }
 
     @Override
@@ -44,7 +48,10 @@ public class TestScriptProvider implements IScriptProvider {
 
     @Override
     public int GetScriptLineCount(int bookNumber) {
-        return 0;
+        Integer result = BookScriptLineCounts.get(bookNumber);
+        if (result == null)
+            return 0;
+        return result;
     }
 
     @Override
@@ -79,7 +86,7 @@ public class TestScriptProvider implements IScriptProvider {
 
     @Override
     public String getProjectName() {
-        return null;
+        return "Test";
     }
 
     @Override
