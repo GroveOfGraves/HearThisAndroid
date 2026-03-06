@@ -9,14 +9,12 @@ import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibilit
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import android.Manifest;
 import android.content.Context;
 import android.os.Build;
 
-import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.espresso.matcher.ViewMatchers;
@@ -113,10 +111,16 @@ public class SyncActivityTest {
             
             // On some platforms (especially Android 13+), the activity may be destroyed 
             // almost immediately after calling finish(), which causes scenario.onActivity() to fail.
-            // Instead, we wait for the idle state and check the scenario's lifecycle state.
+            // On others (like Android 12), it might take a moment to transition states.
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            assertEquals("Activity should reach DESTROYED state after clicking Continue",
-                    Lifecycle.State.DESTROYED, scenario.getState());
+            try {
+                scenario.onActivity(activity -> assertTrue("Activity should be finishing", activity.isFinishing()));
+            } catch (NullPointerException e) {
+                // If it's already destroyed, then it definitely finished.
+                if (e.getMessage() == null || !e.getMessage().contains("onActivity since Activity has been destroyed already")) {
+                    throw e;
+                }
+            }
         }
     }
 }
