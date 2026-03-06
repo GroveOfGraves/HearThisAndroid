@@ -6,9 +6,13 @@ Simple Scripture recording on Android Devices
 Synchronizes (over local WiFi) with HearThis for Windows. Can display, record and play back Scripture.
 
 #Building
-The project targets Android SDK 36 (Android 16) to meet Google Play's current requirements. Build requirements:
+The project targets Android SDK 36 (Android 16) to meet Google Play's current requirements. The simplest way to get started is to install the latest stable version of Android Studio and open this repository as the project — Android Studio will handle the rest automatically.
 
-- **Android Studio** — a recent version that supports Android Gradle Plugin 9.1.0 (Meerkat 2024.3.1 or later is recommended)
+> **Important:** use the latest stable version of Android Studio. As of development, this is **Android Studio Panda 2 | 2025.3.2**. Older versions may not recognise or be able to download the required Gradle version, causing the build to fail.
+
+Build requirements:
+
+- **Android Studio** — latest stable release (Panda 2 | 2025.3.2 or later); open the repository root as the project and let Android Studio sync and configure everything automatically
 - **Android SDK Platform 36** — install via the SDK Manager in Android Studio (*SDK Platforms* tab, API level 36)
 - **Android SDK Build-Tools** — any version compatible with API 36 (install the latest available via the SDK Manager)
 - **Android SDK Platform-Tools** — the latest stable version
