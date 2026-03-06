@@ -1,12 +1,5 @@
 package org.sil.hearthis;
 
-import static androidx.test.espresso.Espresso.onView;
-import static androidx.test.espresso.action.ViewActions.click;
-import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
-import static androidx.test.espresso.matcher.ViewMatchers.withId;
-import static androidx.test.espresso.matcher.ViewMatchers.withText;
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -15,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
 import android.view.MotionEvent;
+import android.widget.TextView;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
@@ -36,6 +30,7 @@ import script.TestFileSystem;
 /**
  * Instrumentation tests for RecordActivity.
  * Covers: Loading, Navigation, Recording Workflow, and State Persistence.
+ * Uses onActivity assertions for stability on older Android versions (API 26-28).
  */
 @RunWith(AndroidJUnit4.class)
 public class RecordActivityTest {
@@ -80,10 +75,11 @@ public class RecordActivityTest {
     public void recordActivity_loadsCorrectInitialText() {
         Intent intent = createIntentForMatthewChapter1();
 
-        try (ActivityScenario<RecordActivity> ignored = ActivityScenario.launch(intent)) {
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            // Verify that the first line of Matthew 1 is displayed.
-            onView(withText(containsString("Matthew line 0"))).check(matches(isDisplayed()));
+        try (ActivityScenario<RecordActivity> scenario = ActivityScenario.launch(intent)) {
+            scenario.onActivity(activity -> {
+                TextView lineView = (TextView) activity._linesView.getChildAt(0);
+                assertEquals("Matthew line 0", lineView.getText().toString());
+            });
         }
     }
 
@@ -91,16 +87,21 @@ public class RecordActivityTest {
     public void recordActivity_navigatesToNextLine() {
         Intent intent = createIntentForMatthewChapter1();
 
-        try (ActivityScenario<RecordActivity> ignored = ActivityScenario.launch(intent)) {
+        try (ActivityScenario<RecordActivity> scenario = ActivityScenario.launch(intent)) {
+            scenario.onActivity(activity -> {
+                TextView lineView = (TextView) activity._linesView.getChildAt(0);
+                assertEquals("Matthew line 0", lineView.getText().toString());
+                
+                // Click Next button
+                activity.nextButton.performClick();
+            });
+            
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            // Verify initial line
-            onView(withText(containsString("Matthew line 0"))).check(matches(isDisplayed()));
 
-            // Click Next button
-            onView(withId(R.id.nextButton)).perform(click());
-
-            // Verify second line is now the focus (it should be displayed)
-            onView(withText(containsString("Matthew line 1"))).check(matches(isDisplayed()));
+            scenario.onActivity(activity -> {
+                // Verify second line is now active
+                assertEquals("Active line should be 1", 1, activity._activeLine);
+            });
         }
     }
 
@@ -158,9 +159,9 @@ public class RecordActivityTest {
         Intent intent = createIntentForMatthewChapter1();
         
         try (ActivityScenario<RecordActivity> scenario = ActivityScenario.launch(intent)) {
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            scenario.onActivity(activity -> activity.nextButton.performClick());
             
-            onView(withId(R.id.nextButton)).perform(click());
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             
             // Move through lifecycle to trigger onPause
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.STARTED);

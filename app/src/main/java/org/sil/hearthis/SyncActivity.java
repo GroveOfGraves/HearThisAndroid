@@ -70,7 +70,9 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        EdgeToEdge.enable(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            EdgeToEdge.enable(this);
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sync);
 

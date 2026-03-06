@@ -1,5 +1,6 @@
 package org.sil.hearthis;
 
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -21,7 +22,9 @@ public class ChooseProjectActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        EdgeToEdge.enable(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            EdgeToEdge.enable(this);
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_choose_project);
 

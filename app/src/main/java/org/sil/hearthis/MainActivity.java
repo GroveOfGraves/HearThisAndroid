@@ -9,6 +9,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -30,7 +31,9 @@ public class MainActivity extends AppCompatActivity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		EdgeToEdge.enable(this);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			EdgeToEdge.enable(this);
+		}
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
@@ -124,10 +127,8 @@ public class MainActivity extends AppCompatActivity {
 		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
 		if (requestCode == MY_PERMISSIONS_REQUEST_RECORD_AUDIO) {
-			if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-				// Permission granted. The volume meter will now work.
-			}
-			// Proceed to the next activity regardless of the result.
+            // Permission granted. The volume meter will now work.
+            // Proceed to the next activity regardless of the result.
 			launchChooseBookIfProject();
 		}
 	}

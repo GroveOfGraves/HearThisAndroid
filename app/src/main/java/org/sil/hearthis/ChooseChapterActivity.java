@@ -4,6 +4,7 @@ import script.BookInfo;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -22,7 +23,9 @@ import java.util.Objects;
 public class ChooseChapterActivity extends AppCompatActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		EdgeToEdge.enable(this);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			EdgeToEdge.enable(this);
+		}
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_chapters);
 
