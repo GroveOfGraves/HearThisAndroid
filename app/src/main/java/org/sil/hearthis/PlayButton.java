@@ -29,10 +29,10 @@ public class PlayButton extends CustomButton {
         playBorderPaint.setStrokeWidth(6f);
         playBorderPaint.setStyle(Paint.Style.STROKE);
     }
-    Paint blueFillPaint;
-    Paint highlightBorderPaint;
-    Paint disabledPaint;
-    Paint playBorderPaint;
+    final Paint blueFillPaint;
+    final Paint highlightBorderPaint;
+    final Paint disabledPaint;
+    final Paint playBorderPaint;
 
     boolean playing;
     boolean getPlaying() { return playing;}

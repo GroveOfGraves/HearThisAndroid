@@ -65,8 +65,8 @@ public class AcceptFileHandler {
 
             if (contentOrPath != null) {
                 File dir = file.getParentFile();
-                if (dir != null && !dir.exists()) {
-                    dir.mkdirs();
+                if (dir != null && !dir.exists() && !dir.mkdirs()) {
+                    Log.e(TAG, "Failed to create directory: " + dir.getAbsolutePath());
                 }
 
                 // Check if it's a file path or raw content.

@@ -17,7 +17,7 @@ import java.util.ArrayList;
  */
 public class FileSystem implements IFileSystem {
 
-    IFileSystem core;
+    final IFileSystem core;
     public FileSystem(IFileSystem core) {
         this.core = core;
     }

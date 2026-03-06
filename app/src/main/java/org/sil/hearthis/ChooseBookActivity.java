@@ -94,7 +94,7 @@ public class ChooseBookActivity extends AppCompatActivity {
         }
     }
 
-    public View.OnClickListener bookButtonListener = v -> {
+    public final View.OnClickListener bookButtonListener = v -> {
             BookInfo book = (BookInfo)v.getTag();
             Intent chooseChapter = new Intent(ChooseBookActivity.this, ChooseChapterActivity.class);
             chooseChapter.putExtra("bookInfo", book);

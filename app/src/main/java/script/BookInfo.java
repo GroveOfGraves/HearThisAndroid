@@ -5,10 +5,10 @@ import org.sil.hearthis.ServiceLocator;
 import java.io.Serializable;
 
 public class BookInfo implements Serializable {
-    public String Name;
+    public final String  Name;
 	public String Abbr;
-	public int ChapterCount;
-	public int BookNumber;
+	public final int ChapterCount;
+	public final int BookNumber;
 
     // This doesn't get serialized (much too expensive, and we only want to have one).
     // When a BookInfo is passed from one activity to another, (the reason to be Serializable)
