@@ -3,37 +3,42 @@ package org.sil.hearthis;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
 
 import android.content.Context;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
+import org.robolectric.annotation.Config;
 
 import Script.BookInfo;
-import Script.IScriptProvider;
 
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 35)
 public class BookButtonTest {
 
-    @Mock
-    Context mockContext;
-    @Mock
-    IScriptProvider mockScriptProvider;
+    private Context context;
+    private TestScriptProvider scriptProvider;
+
+    @Before
+    public void setUp() {
+        context = RuntimeEnvironment.getApplication();
+        scriptProvider = new TestScriptProvider();
+    }
 
     private BookInfo createBookInfo(int bookNumber, String abbr) {
-        BookInfo info = new BookInfo("test", bookNumber, "Genesis", 50, new int[50], mockScriptProvider);
+        BookInfo info = new BookInfo("test", bookNumber, "Genesis", 50, new int[50], scriptProvider);
         info.Abbr = abbr;
         return info;
     }
 
     @Test
     public void testGetForeColor_NothingTranslated_ReturnsGrey() {
-        when(mockScriptProvider.GetTranslatedLineCount(0)).thenReturn(0);
+        scriptProvider.setTranslatedBookCount(0, 0);
 
-        BookButton button = new BookButton(mockContext, null);
+        BookButton button = new BookButton(context, null);
         button.Model = createBookInfo(0, "gen");
 
         assertEquals(R.color.navButtonUntranslatedColor, button.getForeColor());
@@ -41,9 +46,9 @@ public class BookButtonTest {
 
     @Test
     public void testGetForeColor_SomethingTranslated_Joshua_ReturnsHistoryColor() {
-        when(mockScriptProvider.GetTranslatedLineCount(6)).thenReturn(3);
+        scriptProvider.setTranslatedBookCount(6, 3);
 
-        BookButton button = new BookButton(mockContext, null);
+        BookButton button = new BookButton(context, null);
         button.Model = createBookInfo(6, "josh");
 
         assertEquals(R.color.navButtonHistoryColor, button.getForeColor());
@@ -51,9 +56,9 @@ public class BookButtonTest {
 
     @Test
     public void testGetForeColor_SomethingTranslated_Genesis_ReturnsLawColor() {
-        when(mockScriptProvider.GetTranslatedLineCount(0)).thenReturn(3);
+        scriptProvider.setTranslatedBookCount(0, 3);
 
-        BookButton button = new BookButton(mockContext, null);
+        BookButton button = new BookButton(context, null);
         button.Model = createBookInfo(0, "gen");
 
         assertEquals(R.color.navButtonLawColor, button.getForeColor());
@@ -61,7 +66,7 @@ public class BookButtonTest {
 
     @Test
     public void testGetLabel_NumericAbbr_FormatsCorrectly() {
-        BookButton button = new BookButton(mockContext, null);
+        BookButton button = new BookButton(context, null);
         button.Model = createBookInfo(18, "1sam");
 
         assertEquals("1Sam", button.getLabel());
@@ -69,7 +74,7 @@ public class BookButtonTest {
 
     @Test
     public void testGetLabel_AlphaAbbr_FormatsCorrectly() {
-        BookButton button = new BookButton(mockContext, null);
+        BookButton button = new BookButton(context, null);
         button.Model = createBookInfo(0, "gen");
 
         assertEquals("Gen", button.getLabel());
@@ -77,10 +82,10 @@ public class BookButtonTest {
 
     @Test
     public void testIsAllRecorded_Partial_ReturnsFalse() {
-        when(mockScriptProvider.GetTranslatedLineCount(0)).thenReturn(5);
-        when(mockScriptProvider.GetScriptLineCount(0)).thenReturn(10);
+        scriptProvider.setTranslatedBookCount(0, 5);
+        scriptProvider.setScriptLineCount(0, 10);
 
-        BookButton button = new BookButton(mockContext, null);
+        BookButton button = new BookButton(context, null);
         button.Model = createBookInfo(0, "gen");
 
         assertFalse(button.isAllRecorded());
@@ -88,10 +93,10 @@ public class BookButtonTest {
 
     @Test
     public void testIsAllRecorded_Complete_ReturnsTrue() {
-        when(mockScriptProvider.GetTranslatedLineCount(0)).thenReturn(10);
-        when(mockScriptProvider.GetScriptLineCount(0)).thenReturn(10);
+        scriptProvider.setTranslatedBookCount(0, 10);
+        scriptProvider.setScriptLineCount(0, 10);
 
-        BookButton button = new BookButton(mockContext, null);
+        BookButton button = new BookButton(context, null);
         button.Model = createBookInfo(0, "gen");
 
         assertTrue(button.isAllRecorded());

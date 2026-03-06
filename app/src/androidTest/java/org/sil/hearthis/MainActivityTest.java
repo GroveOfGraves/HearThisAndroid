@@ -54,7 +54,7 @@ public class MainActivityTest {
         TestFileSystem fakeFileSystem = new TestFileSystem();
         fakeFileSystem.project = "kal";
         String infoPath = fakeFileSystem.getInfoTxtPath();
-        fakeFileSystem.SimulateFile(infoPath, fakeFileSystem.getDefaultInfoTxtContent());
+        fakeFileSystem.simulateFile(infoPath, fakeFileSystem.getDefaultInfoTxtContent());
         fakeFileSystem.SimulateDirectory(fakeFileSystem.getProjectDirectory());
         
         final ServiceLocator serviceLocator = ServiceLocator.getServiceLocator();
