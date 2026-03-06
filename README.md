@@ -20,6 +20,55 @@ Unfortunately wherever it saves the build configurations does not seem to be che
 The second group of tests currently all fail; my recent attempts to run the others result in reports that no tests are found to run.
 There are also some tests in app\src\test\java\org\sil\hearthis\RecordActivityUnitTest.java. I am not sure these ever worked.
 
+### Camera and Scanning
+
+The application was using a deprecated `play-services-vision` (GMS Vision) library for QR code scanning. This was replaced with two modern Jetpack and ML Kit libraries.
+
+- **ML Kit Barcode Scanning** (`com.google.mlkit:barcode-scanning`): An on-device barcode scanning library that does not require Google Play Services to be installed on the device. It replaced `play-services-vision`, which Google has deprecated in favour of the standalone ML Kit suite.
+- **CameraX** (`androidx.camera:camera-core`, `camera-camera2`, `camera-lifecycle`, `camera-view`): A Jetpack camera library that correctly manages the camera lifecycle and simplifies camera integration. It replaced the legacy `Camera` and `CameraSource` APIs that were coupled to the old GMS Vision workflow.
+
+These changes required raising the minimum SDK from 21 to 23, as both CameraX and ML Kit require at least API 23.
+
+### Build System
+
+The build system was significantly updated to target API 36. A series of incremental changes were made across several commits.
+
+- Upgraded Android Gradle Plugin from 7.3.1 to 9.1.0
+- Upgraded Gradle wrapper from 9.2.1 to 9.3.1
+- Updated `compileSdk` and `targetSdk` from 33 to 36
+- Updated `minSdk` from 18 to 21 in the initial Android 15 update, then further to 23 when the camera and scanning libraries were added (see Camera and Scanning section above)
+- Replaced the deprecated `jcenter()` Maven repository with `mavenCentral()`
+- Removed Jetifier, which is no longer needed now that all dependencies use AndroidX-native artifacts
+- Added Java 17 source and target compatibility via `compileOptions`
+- Added an explicit `namespace` declaration to `app/build.gradle`, which is required by newer AGP versions
+- Removed `useLibrary 'org.apache.http.legacy'`, which was only needed by the old Apache HTTP server and became unnecessary after switching to NanoHTTPD
+- Cleaned up stale and deprecated entries in `gradle.properties`
+
+### Testing
+
+The test suite was significantly expanded and modernised alongside the library and API upgrades.
+
+New unit tests that run locally without a device or emulator (using Robolectric):
+
+- `AcceptFileHandlerTest.java` — tests the HTTP file upload handler, including path traversal protection
+- `HearThisPreferencesTest.java` — tests that application preferences are correctly persisted and retrieved
+- `LevelMeterViewTest.java` — tests the level update throttle logic in the audio level meter view
+
+New instrumentation tests that run on a device or emulator:
+
+- `BookSelectionTest.java` — tests the navigation flow from the book chooser to the chapter chooser
+- `ProjectSelectionTest.java` — tests project listing and selection in `ChooseProjectActivity`
+- `RecordActivityTest.java` — covers loading, navigation, the recording workflow, and state persistence in `RecordActivity`
+- `SyncActivityTest.java` — tests initial UI state, CameraX initialisation, and `SyncService` integration in `SyncActivity`
+
+A shared source set at `src/sharedTest/java` was introduced. `TestFileSystem` and `TestScriptProvider` were previously duplicated between the unit and instrumentation test directories; they now live in one place and are included in both via `sourceSets` configuration in `app/build.gradle`.
+
+Test library changes:
+
+- Replaced Mockito with Robolectric 4.14.1 and Java dynamic proxies for cleaner, warning-free unit testing
+- Updated all `androidx.test` libraries to versions compatible with API 36 (`espresso-core` 3.7.0, `junit-ext` 1.3.0, `uiautomator` 2.3.0)
+- Added `espresso-intents` for testing intent-based navigation flows between activities
+
 # License
 
 HearThisAndroid is open source, using the [MIT License](http://sil.mit-license.org). It is Copyright SIL International.
