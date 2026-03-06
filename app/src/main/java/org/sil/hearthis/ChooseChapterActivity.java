@@ -1,6 +1,6 @@
 package org.sil.hearthis;
 
-import Script.BookInfo;
+import script.BookInfo;
 
 import android.content.Context;
 import android.content.Intent;

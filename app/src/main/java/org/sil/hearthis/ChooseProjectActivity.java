@@ -14,8 +14,8 @@ import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import Script.FileSystem;
-import Script.RealScriptProvider;
+import script.FileSystem;
+import script.RealScriptProvider;
 
 public class ChooseProjectActivity extends AppCompatActivity {
 

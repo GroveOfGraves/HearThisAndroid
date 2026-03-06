@@ -18,9 +18,9 @@ import android.view.ViewGroup;
 
 import java.util.Objects;
 
-import Script.BookInfo;
-import Script.IScriptProvider;
-import Script.Project;
+import script.BookInfo;
+import script.IScriptProvider;
+import script.Project;
 
 
 public class ChooseBookActivity extends AppCompatActivity {

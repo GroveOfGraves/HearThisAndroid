@@ -1,35 +1,33 @@
-package Script;
+package script;
 
+import android.util.Log;
 import org.sil.hearthis.RecordActivity;
 import org.sil.hearthis.ServiceLocator;
-import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 public class RealScriptProvider implements IScriptProvider {
+    private static final String TAG = "RealScriptProvider";
 
 	String _path;
-	List<BookData> Books = new ArrayList<BookData>();
+	List<BookData> Books = new ArrayList<>();
     public static String infoFileName = "info.xml";
     FileSystem getFileSystem() {
         return ServiceLocator.getServiceLocator().getFileSystem();
@@ -48,7 +46,7 @@ public class RealScriptProvider implements IScriptProvider {
             return getChapFolder() + "/" + (blockNo) + (RecordActivity.useWaveRecorder ? ".wav" : ".mp4");
         }
 		String[] getLines() {
-			if (lineCount == 0 || (lines != null && lineCount == lines.length && lineCount > 0)) // none, or already loaded.
+			if (lineCount == 0 || lines != null && lineCount == lines.length) // none, or already loaded.
             {
                 return lines;
             }
@@ -87,7 +85,7 @@ public class RealScriptProvider implements IScriptProvider {
                                 try {
                                     lineNumber = Integer.parseInt(numberNodes.item(0).getTextContent());
                                 } catch (NumberFormatException e) {
-                                    e.printStackTrace();
+                                    Log.w(TAG, "Failed to parse line number in " + getChapInfoFile(), e);
                                 }
                                 if (textNodes.getLength() > 0 && lineNumber >= 1 && lineNumber <= recordings.length) {
                                     recordings[lineNumber - 1] = textNodes.item(0).getTextContent();
@@ -97,14 +95,13 @@ public class RealScriptProvider implements IScriptProvider {
                     }
                 }
                 catch(Exception e) {
-                    e.printStackTrace();
+                    Log.e(TAG, "Error in getLines for " + getChapInfoFile(), e);
                 }
             }
             return lines;
         }
 
         final String recordingsEltName = "Recordings";
-        final String lineNoEltName = "LineNumber";
 
         void noteLineRecorded(int lineNoZeroBased) {
             int lineNo = lineNoZeroBased + 1;
@@ -126,13 +123,13 @@ public class RealScriptProvider implements IScriptProvider {
                             recording = dom.createElement(recordingsEltName);
                             root.appendChild(recording);
                         }
-                        NodeList recordings = ((Element) recording).getElementsByTagName("ScriptLine");
-                        Node currentRecording = findNodeByEltValue(recordings, lineNoEltName, "" + lineNo);
+                        NodeList recordings = recording.getElementsByTagName("ScriptLine");
+                        Node currentRecording = findNodeByEltValue(recordings, "" + lineNo);
                         Node newRecording = line.cloneNode(true);
                         if (currentRecording != null) {
                             recording.replaceChild(newRecording, currentRecording);
                         } else {
-                            Node insertBefore = findNodeToInsertBefore(recordings, lineNoEltName, lineNo);
+                            Node insertBefore = findNodeToInsertBefore(recordings, lineNo);
                             recording.insertBefore(newRecording, insertBefore);
                             String infoTxt = getFileSystem().getFile(getInfoTxtPath());
                             String updated = incrementRecordingCount(infoTxt);
@@ -150,12 +147,12 @@ public class RealScriptProvider implements IScriptProvider {
                 fos.flush();
                 fos.close();
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error in noteLineRecorded for " + getChapInfoFile(), e);
             }
         }
 
         String incrementRecordingCount(String oldInfoTxt) {
-            String ls = System.getProperty("line.separator");
+            String ls = System.lineSeparator();
             String[] lines = oldInfoTxt.split(ls);
             StringBuilder sb = new StringBuilder();
             for (String line : lines) {
@@ -170,23 +167,27 @@ public class RealScriptProvider implements IScriptProvider {
                     String myCount = counts[chapterNumber];
                     String[] sourceRec = myCount.split(":");
                     if (sourceRec.length == 2) {
-                        int recCount = Integer.parseInt(sourceRec[1]);
-                        recCount++;
-                        sb.append(bookName);
-                        sb.append(";");
-                        for (int i = 0; i < chapterNumber; i++) {
-                            sb.append(counts[i]);
-                            sb.append(",");
+                        try {
+                            int recCount = Integer.parseInt(sourceRec[1]);
+                            recCount++;
+                            sb.append(bookName);
+                            sb.append(";");
+                            for (int i = 0; i < chapterNumber; i++) {
+                                sb.append(counts[i]);
+                                sb.append(",");
+                            }
+                            sb.append(sourceRec[0]);
+                            sb.append(":");
+                            sb.append(recCount);
+                            for (int i = chapterNumber + 1; i < counts.length; i++) {
+                                sb.append(",");
+                                sb.append(counts[i]);
+                            }
+                            sb.append(ls);
+                            continue;
+                        } catch (NumberFormatException e) {
+                            Log.e(TAG, "Failed to parse recording count in info.txt: " + sourceRec[1], e);
                         }
-                        sb.append(sourceRec[0]);
-                        sb.append(":");
-                        sb.append(recCount);
-                        for (int i = chapterNumber + 1; i < counts.length; i++) {
-                            sb.append(",");
-                            sb.append(counts[i]);
-                        }
-                        sb.append(ls);
-                        continue;
                     }
                 }
                 sb.append(line);
@@ -195,39 +196,41 @@ public class RealScriptProvider implements IScriptProvider {
             return sb.toString();
         }
 
-        Element findChildByTagName(Element parent, String name) {
-            NodeList list = parent.getElementsByTagName(name);
+        Element findChildByTagName(Element parent) {
+            NodeList list = parent.getElementsByTagName("LineNumber");
             if (list.getLength() > 0)
                 return (Element) list.item(0);
             return null;
         }
 
-        String findChildContentByTagName(Element parent, String name) {
-            Element child = findChildByTagName(parent, name);
+        String findChildContentByTagName(Element parent) {
+            Element child = findChildByTagName(parent);
             if (child == null)
                 return "";
             return child.getTextContent();
         }
 
-        Node findNodeByEltValue(NodeList nodes, String childName, String val) {
+        Node findNodeByEltValue(NodeList nodes, String val) {
             for (int i = 0; i < nodes.getLength(); i++) {
                 Element item = (Element) nodes.item(i);
-                if (findChildContentByTagName(item, childName).equals(val))
+                if (findChildContentByTagName(item).equals(val))
                     return item;
             }
             return null;
         }
 
-        Node findNodeToInsertBefore(NodeList nodes, String childName, int val) {
+        Node findNodeToInsertBefore(NodeList nodes, int val) {
             for (int i = 0; i < nodes.getLength(); i++) {
                 Element item = (Element) nodes.item(i);
-                String thisVal = findChildContentByTagName(item, childName);
+                String thisVal = findChildContentByTagName(item);
                 if (!thisVal.isEmpty()) {
                     try {
                         int thisNum = Integer.parseInt(thisVal);
                         if (thisNum > val)
                             return item;
-                    } catch (NumberFormatException e) {}
+                    } catch (NumberFormatException e) {
+                        Log.v(TAG, "Non-numeric LineNumber value: " + thisVal);
+                    }
                 }
             }
             return null;
@@ -240,19 +243,19 @@ public class RealScriptProvider implements IScriptProvider {
             if (blockNo >= recordings.length)
                 return false;
             String recording = recordings[blockNo];
-            return recording != null && recording.length() > 0;
+            return recording != null && !recording.isEmpty();
         }
     }
 	class BookData {
 		public String name;
-		public List<ChapterData> chapters = new ArrayList<ChapterData>();
+		public List<ChapterData> chapters = new ArrayList<>();
 	}
 	public RealScriptProvider(String path) {
 		_path = path;
 		try	{
             if (!getFileSystem().FileExists(getInfoTxtPath()))
                 return;
-            BufferedReader buf = new BufferedReader(new InputStreamReader(getFileSystem().ReadFile(getInfoTxtPath()),"UTF-8"));
+            BufferedReader buf = new BufferedReader(new InputStreamReader(getFileSystem().ReadFile(getInfoTxtPath()), StandardCharsets.UTF_8));
 			int ibook = 0;
 			for (String line = buf.readLine(); line != null; ibook++, line = buf.readLine()) {
 				String[] parts = line.split(";");
@@ -269,14 +272,19 @@ public class RealScriptProvider implements IScriptProvider {
 						bookdata.chapters.add(cd);
 						cd.bookName = bookdata.name;
                         if (counts.length >= 2) {
-						    cd.lineCount = Integer.parseInt(counts[0]);
-						    cd.translatedCount = Integer.parseInt(counts[1]);
+                            try {
+						        cd.lineCount = Integer.parseInt(counts[0]);
+						        cd.translatedCount = Integer.parseInt(counts[1]);
+                            } catch (NumberFormatException e) {
+                                Log.e(TAG, "Failed to parse counts in info.txt: " + chapSrc, e);
+                            }
                         }
 					}
 				}
 			}
             buf.close();
 		} catch (Exception ex) {
+            Log.e(TAG, "Error initializing RealScriptProvider for path: " + path, ex);
 		}
 	}
 
@@ -293,7 +301,7 @@ public class RealScriptProvider implements IScriptProvider {
         String[] lines = chapter.getLines();
         if (lines == null || lineNumber0Based >= lines.length)
             return new ScriptLine("");
-		return new ScriptLine(lines[lineNumber0Based]);
+        return new ScriptLine(lines[lineNumber0Based]);
 	}
 
 	ChapterData GetChapter(int bookNumber, int chapter1Based) {
@@ -381,6 +389,7 @@ public class RealScriptProvider implements IScriptProvider {
         try {
             content = getFileSystem().getFile(statusPath);
         } catch (IOException e) {
+            Log.e(TAG, "Failed to read status file: " + statusPath, e);
             return null;
         }
         String[] parts = content.split(";");
@@ -392,6 +401,7 @@ public class RealScriptProvider implements IScriptProvider {
             result.chapterNumber = Integer.parseInt(parts[1]);
             result.lineNumber = Integer.parseInt(parts[2]);
         } catch (NumberFormatException e) {
+            Log.e(TAG, "Failed to parse status file content: " + content, e);
             return null;
         }
         return result;
@@ -400,10 +410,13 @@ public class RealScriptProvider implements IScriptProvider {
     @Override
     public void saveLocation(BibleLocation location) {
         try {
-            getFileSystem().putFile(getStatusPath(),
-                    String.format("%d;%d;%d", location.bookNumber, location.chapterNumber, location.lineNumber));
+            // Use Locale.US to ensure numbers are formatted as standard digits (0-9)
+            String content = String.format(java.util.Locale.US, "%d;%d;%d",
+                    location.bookNumber, location.chapterNumber, location.lineNumber);
+
+            getFileSystem().putFile(getStatusPath(), content);
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "Failed to save location to " + getStatusPath(), e);
         }
     }
 
@@ -412,7 +425,7 @@ public class RealScriptProvider implements IScriptProvider {
         int slashIndex = _path.lastIndexOf('/');
         if (slashIndex < 0)
             return _path;
-        return _path.substring(slashIndex + 1, _path.length());
+        return _path.substring(slashIndex + 1);
     }
 
     @Override

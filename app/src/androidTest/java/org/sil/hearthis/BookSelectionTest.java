@@ -29,10 +29,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import Script.BookInfo;
-import Script.FileSystem;
-import Script.RealScriptProvider;
-import Script.TestFileSystem;
+import script.BookInfo;
+import script.FileSystem;
+import script.RealScriptProvider;
+import script.TestFileSystem;
 
 /**
  * Tests the navigation flow from ChooseBookActivity to ChooseChapterActivity.

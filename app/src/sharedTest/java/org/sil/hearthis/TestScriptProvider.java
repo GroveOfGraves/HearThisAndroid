@@ -3,9 +3,9 @@ package org.sil.hearthis;
 import java.util.HashMap;
 import java.util.Map;
 
-import Script.IScriptProvider;
-import Script.BibleLocation;
-import Script.ScriptLine;
+import script.IScriptProvider;
+import script.BibleLocation;
+import script.ScriptLine;
 
 /**
  * Implements IScriptProvider in a way suitable for unit tests

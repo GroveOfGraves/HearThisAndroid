@@ -1,4 +1,4 @@
-package Script;
+package script;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ public class Project {
 
 	public Project(String name, IScriptProvider scriptProvider) {
 		Statistics = new BibleStats();
-		Books = new ArrayList<BookInfo>();
+		Books = new ArrayList<>();
 		_scriptProvider = scriptProvider;
 		
 		for (int bookNumber = 0; bookNumber < Statistics.Books.size(); bookNumber++) {

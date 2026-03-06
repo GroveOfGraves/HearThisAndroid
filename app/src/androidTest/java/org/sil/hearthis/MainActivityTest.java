@@ -13,8 +13,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import Script.FileSystem;
-import Script.TestFileSystem;
+import script.FileSystem;
+import script.TestFileSystem;
 
 /**
  * Modernized MainActivityTest using ActivityScenario.

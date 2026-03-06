@@ -4,10 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
 
-import Script.BibleLocation;
-import Script.BookInfo;
-import Script.IScriptProvider;
-import Script.ScriptLine;
+import script.BibleLocation;
+import script.BookInfo;
+import script.IScriptProvider;
+import script.ScriptLine;
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -510,7 +510,8 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		playButtonPlayer = new MediaPlayer();
 		playButtonPlayer.setOnCompletionListener(this);
 		stopMonitoring();
-		try {
+        //noinspection CommentedOutCode
+        try {
 			// Todo:  file name and location based on book, chapter, segment
 
 //			AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);

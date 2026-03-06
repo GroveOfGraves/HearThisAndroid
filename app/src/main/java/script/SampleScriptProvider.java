@@ -1,4 +1,4 @@
-package Script;
+package script;
 
 public class SampleScriptProvider implements IScriptProvider {
 
