@@ -41,7 +41,8 @@
             android:name=".RecordActivity"/>
         <activity
             android:name=".SyncActivity"
-            android:label="@string/title_activity_sync"/>
+            android:label="@string/title_activity_sync"
+            android:theme="@style/SyncTheme"/>
 
         <service
             android:name=".SyncService"

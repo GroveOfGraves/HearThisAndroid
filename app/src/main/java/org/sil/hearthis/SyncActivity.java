@@ -306,10 +306,14 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     private void sendRegistrationMessage(final String desktopIpAddress) {
         final String ourIpAddress = getOurIpAddress();
+        if (ourIpAddress == null) return;
         new Thread(() -> {
             try (DatagramSocket socket = new DatagramSocket()) {
-                byte[] data = ("HearThisAndroidServer:" + ourIpAddress).getBytes(StandardCharsets.UTF_8);
-                DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(desktopIpAddress), 8087);
+                // Registration must be sent to port 11007 as a UTF-8 encoded string containing 
+                // only the Android device's IPv4 address (no prefix or whitespace), as expected 
+                // by the desktop application.
+                byte[] data = ourIpAddress.getBytes(StandardCharsets.UTF_8);
+                DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(desktopIpAddress), 11007);
                 socket.send(packet);
             } catch (IOException e) {
                 Log.e(TAG, "Error sending registration packet", e);
