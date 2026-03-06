@@ -40,8 +40,10 @@ public class AcceptFileHandler {
         // Fix Path Traversal Vulnerability
         File file = new File(baseDir, filePath);
         try {
-            if (!file.getCanonicalPath().startsWith(baseDir.getCanonicalPath())) {
-                Log.w(TAG, "Attempted path traversal: " + filePath);
+            // Verify path is inside baseDir to prevent traversal attacks
+            String canonicalBase = baseDir.getCanonicalPath();
+            String canonicalRequested = file.getCanonicalPath();
+            if (!canonicalRequested.startsWith(canonicalBase)) {
                 return NanoHTTPD.newFixedLengthResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "Access denied");
             }
         } catch (IOException e) {
@@ -64,14 +66,10 @@ public class AcceptFileHandler {
             if (contentOrPath != null) {
                 File dir = file.getParentFile();
                 if (dir != null && !dir.exists()) {
-                    if (!dir.mkdirs()){
-                        Log.e("Recorder","Error creating directory at " + dir.getAbsolutePath());
-                    }
+                    dir.mkdirs();
                 }
 
                 // Check if it's a file path or raw content.
-                // Raw content (XML or info.txt) won't start with / and be a valid path.
-                // We also limit the length check for path strings to avoid ENAMETOOLONG on the exists() call.
                 boolean isPath = false;
                 if (contentOrPath.length() < 1024 && contentOrPath.startsWith("/")) {
                     File srcFile = new File(contentOrPath);
@@ -87,14 +85,11 @@ public class AcceptFileHandler {
                         out.write(contentOrPath.getBytes(StandardCharsets.UTF_8));
                     }
                 }
-                Log.d(TAG, "Successfully saved file to: " + file.getAbsolutePath());
                 return NanoHTTPD.newFixedLengthResponse(Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, "success\n");
             } else {
-                Log.e(TAG, "No content found in request body");
                 return NanoHTTPD.newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, "failure: no content\n");
             }
         } catch (Exception e) {
-            Log.e(TAG, "Failed to accept file: " + filePath, e);
             return NanoHTTPD.newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "failure: " + e.getMessage() + "\n");
         }
     }
