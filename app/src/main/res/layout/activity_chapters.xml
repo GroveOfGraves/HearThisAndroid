@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/mainBackground" >
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/bookNameText"
@@ -15,7 +15,8 @@
         android:paddingRight="10dp"
         android:paddingTop="5dp"
         android:textColor="@color/labelTextColor"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        tools:text="Book Name"/>
 
     <ScrollView
         android:layout_width="match_parent"
@@ -27,7 +28,8 @@
             android:id="@+id/chapsFlow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="8dp">
+            android:padding="8dp"
+            android:contentDescription="@string/choose_chapter">
         </org.apmem.tools.layouts.FlowLayout>
     </ScrollView>
 

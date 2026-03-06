@@ -1,7 +1,7 @@
 package org.sil.hearthis;
 
-import Script.BookInfo;
-import Script.IScriptProvider;
+import script.BookInfo;
+import script.IScriptProvider;
 
 import android.content.Context;
 import android.util.AttributeSet;

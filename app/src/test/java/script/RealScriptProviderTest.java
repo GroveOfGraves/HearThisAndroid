@@ -1,4 +1,4 @@
-package Script;
+package script;
 
 import org.junit.After;
 import org.junit.Before;
@@ -118,7 +118,7 @@ public class RealScriptProviderTest {
         addEx0Chapter(fs);
         sp.noteBlockRecorded(1, 0, 2);
         Element recording = findOneElementByTagName(fs.ReadFile(getEx0Path(fs)), "Recordings");
-        Element line = findNthChild(recording, 0, 1, "ScriptLine");
+        Element line = findNthChild(recording, 0, 1);
         verifyChildContent(line, "LineNumber", "3");
         verifyChildContent(line, "Text", "Some Introduction Second");
         verifyRecordingCount(1, 0, 1);
@@ -145,10 +145,10 @@ public class RealScriptProviderTest {
         sp.noteBlockRecorded(1, 0, 2);
         sp.noteBlockRecorded(1,0, 1);
         Element recording = findOneElementByTagName(fs.ReadFile(getEx0Path(fs)), "Recordings");
-        Element line = findNthChild(recording, 0, 2, "ScriptLine");
+        Element line = findNthChild(recording, 0, 2);
         verifyChildContent(line, "LineNumber", "2");
         verifyChildContent(line, "Text", "Some Introduction First");
-        line = findNthChild(recording, 1, 2, "ScriptLine");
+        line = findNthChild(recording, 1, 2);
         verifyChildContent(line, "LineNumber", "3");
         verifyChildContent(line, "Text", "Some Introduction Second");
     }
@@ -160,10 +160,10 @@ public class RealScriptProviderTest {
         sp.noteBlockRecorded(1, 0, 1);
         sp.noteBlockRecorded(1,0, 2);
         Element recording = findOneElementByTagName(fs.ReadFile(getEx0Path(fs)), "Recordings");
-        Element line = findNthChild(recording, 0, 2, "ScriptLine");
+        Element line = findNthChild(recording, 0, 2);
         verifyChildContent(line, "LineNumber", "2");
         verifyChildContent(line, "Text", "Some Introduction First");
-        line = findNthChild(recording, 1, 2, "ScriptLine");
+        line = findNthChild(recording, 1, 2);
         verifyChildContent(line, "LineNumber", "3");
         verifyChildContent(line, "Text", "Some Introduction Second");
     }
@@ -181,7 +181,7 @@ public class RealScriptProviderTest {
         sp.noteBlockRecorded(1, 0, 1); // should overwrite
 
         Element recording = findOneElementByTagName(fs.ReadFile(ex0Path), "Recordings");
-        Element line = findNthChild(recording, 0, 1, "ScriptLine");
+        Element line = findNthChild(recording, 0, 1);
         verifyChildContent(line, "LineNumber", "2");
         verifyChildContent(line, "Text", "New Introduction");
     }
@@ -206,19 +206,19 @@ public class RealScriptProviderTest {
             return (Element) node;
         }
         catch(Exception ex) {
-            assertTrue("Unexpected exception in findOneElementMatching " + ex.toString(), ex == null);
+            assertNull("Unexpected exception in findOneElementMatching " + ex.toString(), ex);
         }
         return null; // unreachable
     }
 
     // Verify that parent has count children and the indexth one has the specified tag.
     // return the indexth element.
-    Element findNthChild(Element parent, int index, int count, String tag) {
+    Element findNthChild(Element parent, int index, int count) {
         assertEquals(count, parent.getChildNodes().getLength());
         Node nth = parent.getChildNodes().item(index);
         assertTrue("expected nth child to be Element", nth instanceof Element);
         Element result = (Element) nth;
-        assertEquals(tag, result.getTagName());
+        assertEquals("ScriptLine", result.getTagName());
         return result;
     }
 

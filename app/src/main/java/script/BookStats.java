@@ -1,4 +1,4 @@
-package Script;
+package script;
 
 public class BookStats {
 	public String Name;

@@ -22,6 +22,7 @@
     <!-- Application theme. -->
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
+        <item name="android:windowBackground">@color/mainBackground</item>
     </style>
     <color name="mainBackground">#404040</color>
     <color name="navButtonHiliteColor">#913A1B</color>
@@ -52,4 +53,8 @@
     <color name="recordingColor">#39A500</color>
     <color name="audioButtonDisabledColor">#5F5F5F</color>
     <color name="scanPreviewBackground">#DDDDDD</color>
+
+    <!-- <style name="AppTheme" parent="AppBaseTheme">
+        <item name="android:windowBackground">@color/mainBackground</item>
+    </style> -->
 </resources>

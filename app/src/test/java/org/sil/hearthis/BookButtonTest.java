@@ -12,8 +12,8 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import Script.BookInfo;
-import Script.IScriptProvider;
+import script.BookInfo;
+import script.IScriptProvider;
 
 @RunWith(MockitoJUnitRunner.class)
 public class BookButtonTest {

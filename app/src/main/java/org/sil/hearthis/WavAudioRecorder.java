@@ -362,11 +362,11 @@ public class WavAudioRecorder {
 				randomAccessWriter.writeInt(Integer.reverseBytes(payloadSize));
 
 				randomAccessWriter.close();
+				state = State.STOPPED;
 			} catch(IOException e) {
 				Log.e(WavAudioRecorder.class.getName(), "I/O exception occured while closing output file");
 				state = State.ERROR;
 			}
-			state = State.STOPPED;
 		} else if (state == State.MONITORING) {
 			audioRecorder.stop();
 			state = State.STOPPED;

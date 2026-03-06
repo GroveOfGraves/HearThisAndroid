@@ -1,12 +1,15 @@
 package org.sil.hearthis;
 
-import android.app.Service;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import junit.framework.Assert;
+import org.junit.Test;
 
-import Script.FileSystem;
-import Script.RealScriptProvider;
-import Script.TestFileSystem;
+import script.FileSystem;
+import script.RealScriptProvider;
+import script.TestFileSystem;
 
 /**
  * Created by Thomson on 3/27/2016.
@@ -22,36 +25,39 @@ public class RealScriptProviderTest {
         tfs.simulateFile(tfs.project + "/info.txt", tfs.getDefaultInfoTxtContent());
     }
 
-    @org.junit.Test
+    @Test
     public void getBasicDataFromInfoTxt() {
         makeDfaultFs();
         RealScriptProvider sp = new RealScriptProvider(tfs.project);
         ServiceLocator.getServiceLocator().setScriptProvider(sp);
-        Assert.assertEquals(0, sp.GetScriptLineCount(0));
-        Assert.assertEquals(38, sp.GetScriptLineCount(39));
-        Assert.assertEquals(12, sp.GetScriptLineCount(39, 1));
+        
+        assertThat(sp.GetScriptLineCount(0), is(0));
+        assertThat(sp.GetScriptLineCount(39), is(38));
+        assertThat(sp.GetScriptLineCount(39, 1), is(12));
     }
 
-    @org.junit.Test
+    @Test
     public void getBasicLineData() {
         makeDfaultFs();
         tfs.MakeChapterContent("Matthew", 1, new String[]{"first line", "second line", "third line"}, null);
         RealScriptProvider sp = new RealScriptProvider(tfs.project);
         ServiceLocator.getServiceLocator().setScriptProvider(sp);
-        Assert.assertEquals("first line", sp.GetLine(39, 1, 0).Text);
-        Assert.assertEquals("second line", sp.GetLine(39, 1, 1).Text);
-        Assert.assertEquals("third line", sp.GetLine(39, 1, 2).Text);
+        
+        assertThat(sp.GetLine(39, 1, 0).Text, is("first line"));
+        assertThat(sp.GetLine(39, 1, 1).Text, is("second line"));
+        assertThat(sp.GetLine(39, 1, 2).Text, is("third line"));
     }
 
-    @org.junit.Test
+    @Test
     public void getRecordingExists() {
         makeDfaultFs();
         tfs.MakeChapterContent("Matthew", 1, new String[]{"first line", "second line", "third line"},
                 new String[] {null, "second line", null});
         RealScriptProvider sp = new RealScriptProvider(tfs.project);
         ServiceLocator.getServiceLocator().setScriptProvider(sp);
-        Assert.assertEquals(false, sp.hasRecording(39, 1, 0));
-        Assert.assertEquals(true, sp.hasRecording(39, 1, 1));
-        Assert.assertEquals(false, sp.hasRecording(39, 1, 2));
+        
+        assertFalse(sp.hasRecording(39, 1, 0));
+        assertTrue(sp.hasRecording(39, 1, 1));
+        assertFalse(sp.hasRecording(39, 1, 2));
     }
 }
