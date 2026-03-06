@@ -1,9 +1,9 @@
 package org.sil.hearthis;
 
-import Script.BibleLocation;
-import Script.FileSystem;
-import Script.IScriptProvider;
-import Script.Project;
+import script.BibleLocation;
+import script.FileSystem;
+import script.IScriptProvider;
+import script.Project;
 
 import android.Manifest;
 import android.app.Activity;

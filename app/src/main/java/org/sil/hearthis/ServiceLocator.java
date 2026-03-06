@@ -5,11 +5,11 @@ import android.app.Activity;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import Script.FileSystem;
-import Script.IScriptProvider;
-import Script.Project;
-import Script.RealFileSystem;
-import Script.RealScriptProvider;
+import script.FileSystem;
+import script.IScriptProvider;
+import script.Project;
+import script.RealFileSystem;
+import script.RealScriptProvider;
 
 /**
  * This class facilitates locating the instance that should be used of various services.

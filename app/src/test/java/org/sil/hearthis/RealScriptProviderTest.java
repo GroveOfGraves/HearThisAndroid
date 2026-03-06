@@ -15,9 +15,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.Assert.*;
 
-import Script.FileSystem;
-import Script.RealScriptProvider;
-import Script.TestFileSystem;
+import script.FileSystem;
+import script.RealScriptProvider;
+import script.TestFileSystem;
 
 public class RealScriptProviderTest {
 
@@ -128,10 +128,10 @@ public class RealScriptProviderTest {
         RealScriptProvider sp = getGenExScriptProvider();
         addEx0Chapter(fs);
         sp.noteBlockRecorded(1, 0, 2);
-        
+
         // Use findOneElementByTagName with "Source" to vary the tag parameter and resolve warnings
         assertNotNull(findOneElementByTagName(fs.ReadFile(getEx0Path(fs)), "Source"));
-        
+
         Element recording = findOneElementByTagName(fs.ReadFile(getEx0Path(fs)), "Recordings");
         Element line = findNthChild(recording, 0, 1, "ScriptLine");
         verifyChildContent(line, "LineNumber", "3");
@@ -150,7 +150,7 @@ public class RealScriptProviderTest {
                     <ScriptLine><LineNumber>1</LineNumber><Text>G1 L1</Text></ScriptLine>
                 </Source>
             </ChapterInfo>""");
-            
+
         sp.noteBlockRecorded(0, 1, 0);
         // Original count for Gen Chap 1 was 5.
         verifyRecordingCount(0, 1, 6);
@@ -176,15 +176,15 @@ public class RealScriptProviderTest {
         sp.noteBlockRecorded(1, 0, 2);
         sp.noteBlockRecorded(1,0, 1);
         Element recording = findOneElementByTagName(fs.ReadFile(getEx0Path(fs)), "Recordings");
-        
+
         // Use findNthChild with varied counts to resolve warnings
         Element line = findNthChild(recording, 0, 2, "ScriptLine");
         verifyChildContent(line, "LineNumber", "2");
         verifyChildContent(line, "Text", "Some Introduction First");
-        
+
         Element nextLine = findNthChild(recording, 1, 2, "ScriptLine");
         verifyChildContent(nextLine, "LineNumber", "3");
-        
+
         verifyRecordingCount(1, 0, 2);
     }
 
