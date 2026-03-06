@@ -251,7 +251,9 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	}
 
 	private void updateDisplayState() {
-		playButton.setButtonState(new File(_recordingFilePath).exists() ? BtnState.Normal : BtnState.Inactive);
+		boolean recordingExists = new File(_recordingFilePath).exists();
+		playButton.setButtonState(recordingExists ? BtnState.Normal : BtnState.Inactive);
+		playButton.setEnabled(recordingExists);
 	}
 
 	static int getNewScrollPosition(int scrollPos, int height, int newLine, int[] tops) {
@@ -503,7 +505,6 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		_provider.noteBlockRecorded(_bookNum, _chapNum, _activeLine);
 	}
 
-	// Todo: disable when no recording exists.
 	void playButtonClicked() {
 		stopPlaying();
 		playButton.setPlaying(true);
