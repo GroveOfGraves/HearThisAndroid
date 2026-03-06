@@ -57,4 +57,25 @@
     <!-- <style name="AppTheme" parent="AppBaseTheme">
         <item name="android:windowBackground">@color/mainBackground</item>
     </style> -->
+
+    <!-- Theme for SyncActivity with black action bar and white text title only -->
+    <style name="SyncTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">#000000</item>
+        <item name="colorPrimaryDark">#000000</item>
+        <item name="android:windowBackground">@android:color/white</item>
+
+        <!-- Specifically target the title text color and action bar background -->
+        <item name="actionBarStyle">@style/SyncActionBar</item>
+    </style>
+
+    <style name="SyncActionBar" parent="Widget.AppCompat.ActionBar">
+        <item name="background">#000000</item>
+        <item name="android:background">#000000</item>
+        <item name="titleTextStyle">@style/SyncActionBarTitleText</item>
+    </style>
+
+    <style name="SyncActionBarTitleText" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
 </resources>
