@@ -10,15 +10,60 @@ Currently builds and works using Android Studio 2.2.1.
 I have Android SDK platforms installed for 6.0 (Marshmallow/23) and 4.3 (Jelly Bean/18); possibly only the latter is needed. SDK tools I have installed are Android SDK Platform-Tools 24.0.4, Android SDK Tools 25.2.2, Android Support Library, rev 23.2.1, (Documentation for Android SDK, version 1), (Google USB Driver, rev 11), Intel X86 Emulator Accelerator (HAXM installer), 6.0.4), Android Support Repository 38.0.0, Google Repository 36). Ones in parens are those I think are most likely not needed; there may be others that could be omitted. Launching the full SDK manager shows a lot more options installed; hopefully none are relevant. I have not yet had opportunity to attempt a minimal install on a fresh system.
 
 #Testing
-HearThis Android only has minimal automated tests and I have had extreme difficulty getting even that far. I can't get any of them to work with the current version of Android Studio (not that I've spent much effort so far). Both sets ran earlier after many struggles to set up the right build configurations.
+The automated test suite has been significantly expanded and all tests are expected to pass with the current configuration.
 
-1. In app\src\test\java\org\sil\hearthis\BookButtonTest.java are some simple tests designed to run without needing an emulator or real android but directly in JUnit. One way to run these tests is to right-click BookButtonTest in the Project panel on the top left and choose "Run 'BookButtonTest'". 
-To run tests in multiple files, I had to edit build configurations (Run/Edit configurations). If you do this right after a right-click on org.sil.hearthis and "Run tests in '...'" the configuration it is trying to use will be selected. I was not able to get anywhere with running tests by 'All in package', but if you choose 'all in directory' and configure the directory to be a path to <HearThisAndroid>\app\src\test\java\org\sil\hearthis, it runs the right tests. Possibly the problem is that I have the test directory in the wrong place.
-Unfortunately wherever it saves the build configurations does not seem to be checked in.
-2. In app\src\androidTest\java\org\sil\hearthis\MainActivityTest.java are some very minimal tests designed to run on an emulator or real device. I believe these also worked once.
+**Unit tests** (no device or emulator required) live in `app/src/test/java/org/sil/hearthis/` and use JUnit 4 with Robolectric for any tests that need Android context. To run them in Android Studio, right-click the `org.sil.hearthis` package under that directory and choose *Run tests in 'org.sil.hearthis'*.
 
-The second group of tests currently all fail; my recent attempts to run the others result in reports that no tests are found to run.
-There are also some tests in app\src\test\java\org\sil\hearthis\RecordActivityUnitTest.java. I am not sure these ever worked.
+- `BookButtonTest.java` — tests BookButton state and progress logic
+- `RecordActivityUnitTest.java` — tests the scroll-position calculation in RecordActivity (plain JUnit, no Android context needed)
+- `AcceptFileHandlerTest.java` — tests the HTTP file upload handler
+- `HearThisPreferencesTest.java` — tests preference read/write persistence
+- `LevelMeterViewTest.java` — tests the level update throttle logic in the audio meter
+- `RealScriptProviderTest.java` — tests the scripture data parsing logic
+
+**Instrumentation tests** (require an emulator or connected Android device) live in `app/src/androidTest/java/org/sil/hearthis/`. To run them, right-click the package under that directory and choose *Run tests in 'org.sil.hearthis'*.
+
+- `MainActivityTest.java` — tests that the main activity launches and resolves to the correct next screen
+- `BookSelectionTest.java` — tests navigation from the book chooser to the chapter chooser
+- `ProjectSelectionTest.java` — tests project listing and selection
+- `RecordActivityTest.java` — tests loading, navigation, the recording workflow, and state persistence
+- `SyncActivityTest.java` — tests the sync screen UI and SyncService integration
+
+Shared test utilities (`TestFileSystem`, `TestScriptProvider`) are in `app/src/sharedTest/java/` and are automatically included in both test source sets.
+
+### Http Server
+
+The application was using a deprecated http server library. We updated the server with a new library called NanoHTTPD. This allows the server to be future-proof.
+
+Along with updating the server library we ensured that the server ran more efficiently. Tasks we looked into and updated are the following:
+
+- Guard Against Double Start and Stop in SyncServer
+- Fix Path Traversal Vulnerability in File Handlers
+- Remove Static Listener Memory Leaks
+- Make Notification Listener List Thread Safe
+- Fix UI Thread Violations in SyncActivity
+- Improve File Upload Error Handling
+- Improve Resource and Stream Management
+- Remove Hardcoded Device Name
+- Improve Server Lifecycle Management
+
+### Internationalization
+
+Updated application to support various languages. The application currently supports the following:
+
+- English
+- Spanish
+- French
+- German
+- Chinese (simplified)
+
+### Edge-to-edge
+
+Making the application compliant with Android visual constraints, including dynamically changing the status bar to fit within the screen layout.
+
+### Warnings
+
+Walked through all the files cleaning up the warnings, mainly being newer code standards, lambda functions instead of function definitions, and updating deprecated libraries and functions.
 
 ### Camera and Scanning
 
@@ -68,6 +113,10 @@ Test library changes:
 - Replaced Mockito with Robolectric 4.14.1 and Java dynamic proxies for cleaner, warning-free unit testing
 - Updated all `androidx.test` libraries to versions compatible with API 36 (`espresso-core` 3.7.0, `junit-ext` 1.3.0, `uiautomator` 2.3.0)
 - Added `espresso-intents` for testing intent-based navigation flows between activities
+
+### Audio suggestion
+
+The audio functionality could be updated. On one specific device the chapter view would lag and then have audio errors. We believe that the efficiency of the audio functionality should be improved, though it does work. If this is needed for Google Play we are not sure, but it is the next big thing to update.
 
 # License
 
