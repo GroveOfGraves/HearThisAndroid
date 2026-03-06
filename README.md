@@ -6,8 +6,15 @@ Simple Scripture recording on Android Devices
 Synchronizes (over local WiFi) with HearThis for Windows. Can display, record and play back Scripture.
 
 #Building
-Currently builds and works using Android Studio 2.2.1.
-I have Android SDK platforms installed for 6.0 (Marshmallow/23) and 4.3 (Jelly Bean/18); possibly only the latter is needed. SDK tools I have installed are Android SDK Platform-Tools 24.0.4, Android SDK Tools 25.2.2, Android Support Library, rev 23.2.1, (Documentation for Android SDK, version 1), (Google USB Driver, rev 11), Intel X86 Emulator Accelerator (HAXM installer), 6.0.4), Android Support Repository 38.0.0, Google Repository 36). Ones in parens are those I think are most likely not needed; there may be others that could be omitted. Launching the full SDK manager shows a lot more options installed; hopefully none are relevant. I have not yet had opportunity to attempt a minimal install on a fresh system.
+The project targets Android SDK 36 (Android 16) to meet Google Play's current requirements. Build requirements:
+
+- **Android Studio** — a recent version that supports Android Gradle Plugin 9.1.0 (Meerkat 2024.3.1 or later is recommended)
+- **Android SDK Platform 36** — install via the SDK Manager in Android Studio (*SDK Platforms* tab, API level 36)
+- **Android SDK Build-Tools** — any version compatible with API 36 (install the latest available via the SDK Manager)
+- **Android SDK Platform-Tools** — the latest stable version
+- **Minimum SDK**: API 23 (Android 6.0 Marshmallow) — required by the CameraX and ML Kit libraries
+- **Java 17** — the project is compiled with Java 17 source and target compatibility; make sure the JDK in Android Studio is set to 17 or later
+- **Gradle 9.3.1** and **Android Gradle Plugin 9.1.0** — these are managed automatically by the Gradle wrapper; no manual installation is needed
 
 #Testing
 The automated test suite has been significantly expanded and all tests are expected to pass with the current configuration.
