@@ -13,6 +13,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.Manifest;
 import android.content.Context;
+import android.os.Build;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
@@ -34,10 +35,9 @@ import org.junit.runner.RunWith;
 public class SyncActivityTest {
 
     @Rule
-    public GrantPermissionRule permissionRule = GrantPermissionRule.grant(
-            Manifest.permission.CAMERA,
-            Manifest.permission.POST_NOTIFICATIONS
-    );
+    public GrantPermissionRule permissionRule = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ?
+            GrantPermissionRule.grant(Manifest.permission.CAMERA, Manifest.permission.POST_NOTIFICATIONS) :
+            GrantPermissionRule.grant(Manifest.permission.CAMERA);
 
     @Before
     public void setUp() {
