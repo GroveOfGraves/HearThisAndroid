@@ -21,6 +21,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import android.view.View;
 import android.widget.Button;
@@ -33,6 +34,9 @@ public class MainActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 			EdgeToEdge.enable(this);
+            // Explicitly set dark icons for the white status bar when edge-to-edge is enabled
+            new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(false);
 		}
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
@@ -178,8 +182,8 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
-	void LaunchSyncActivity() {
-		Intent sync = new Intent(this, SyncActivity.class);
-		startActivity(sync);
+	private void LaunchSyncActivity() {
+		Intent intent = new Intent(this, SyncActivity.class);
+		startActivity(intent);
 	}
 }

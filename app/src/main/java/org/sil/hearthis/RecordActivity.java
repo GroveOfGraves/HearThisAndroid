@@ -2,6 +2,7 @@ package org.sil.hearthis;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 
 import script.BibleLocation;
@@ -15,6 +16,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -35,6 +37,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.os.BundleCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -78,10 +81,15 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	private final Object startingLock = new Object();
 	volatile boolean starting = false;
 
+	String _recordingFilePath;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 			EdgeToEdge.enable(this);
+            // Explicitly set dark icons for the white status bar when edge-to-edge is enabled
+            new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(false);
 		}
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 			getWindow().getAttributes().layoutInDisplayCutoutMode =
@@ -173,10 +181,10 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		startMonitoring();
 
 		AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-		wasUsingSpeaker = am.isSpeakerphoneOn();
+		wasUsingSpeaker = isSpeakerphoneOn(am);
 		if (usingSpeaker) {
 			am.setMode(AudioManager.MODE_IN_COMMUNICATION);
-			am.setSpeakerphoneOn(true);
+			setSpeakerphoneOn(am, true);
 		}
 	}
 
@@ -194,7 +202,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 		AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 		if (usingSpeaker) {
-			am.setSpeakerphoneOn(false);
+			setSpeakerphoneOn(am, false);
 			am.setMode(AudioManager.MODE_NORMAL);
 		}
 	}
@@ -253,7 +261,9 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	}
 
 	private void updateDisplayState() {
-		playButton.setButtonState(new File(_recordingFilePath).exists() ? BtnState.Normal : BtnState.Inactive);
+		boolean recordingExists = new File(_recordingFilePath).exists();
+		playButton.setButtonState(recordingExists ? BtnState.Normal : BtnState.Inactive);
+		playButton.setEnabled(recordingExists);
 	}
 
 	static int getNewScrollPosition(int scrollPos, int height, int newLine, int[] tops) {
@@ -308,8 +318,6 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			}
 		}
 	}
-
-	String _recordingFilePath = "";
 
 	void startMonitoring() {
 		if (waveRecorder != null)
@@ -368,7 +376,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 			recorder = new MediaRecorder(this);
 		} else {
-			recorder = new MediaRecorder();
+			recorder = createLegacyMediaRecorder();
 		}
 		recorder.setAudioSource(AudioSource.MIC);
 		// Looking for a good combination that produces a usable file.
@@ -398,6 +406,11 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		} catch (IOException e) {
 			Log.e("Recorder", "Error preparing recorder", e);
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private MediaRecorder createLegacyMediaRecorder() {
+		return new MediaRecorder();
 	}
 
 	// completely arbitrary, especially when we're only asking for one dangerous permission.
@@ -506,7 +519,6 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 		_provider.noteBlockRecorded(_bookNum, _chapNum, _activeLine);
 	}
 
-	// Todo: disable when no recording exists.
 	void playButtonClicked() {
 		stopPlaying();
 		playButton.setPlaying(true);
@@ -522,7 +534,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 //			Log.d("Player", "current volume is " + audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
 //					+ " of max " + maxVol);
 //			audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVol, 0);
-			
+
 			File file = new File(_recordingFilePath);
 			playButtonPlayer.setDataSource(file.getAbsolutePath());
 			playButtonPlayer.setAudioAttributes(new AudioAttributes.Builder()
@@ -533,7 +545,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			playButtonPlayer.start();
 		} catch (Exception e) {
 			Log.e("Player", "Error playing audio", e);
-		}		
+		}
 	}
 
 	private void stopPlaying() {
@@ -547,6 +559,39 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			}
 			playButtonPlayer.release();
 			playButtonPlayer = null;
+		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private boolean isSpeakerphoneOn(AudioManager am) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			AudioDeviceInfo device = am.getCommunicationDevice();
+			return device != null && device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER;
+		} else {
+			return am.isSpeakerphoneOn();
+		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private void setSpeakerphoneOn(AudioManager am, boolean on) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			if (on) {
+				List<AudioDeviceInfo> devices = am.getAvailableCommunicationDevices();
+				AudioDeviceInfo speakerDevice = null;
+				for (AudioDeviceInfo device : devices) {
+					if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+						speakerDevice = device;
+						break;
+					}
+				}
+				if (speakerDevice != null) {
+					am.setCommunicationDevice(speakerDevice);
+				}
+			} else {
+				am.clearCommunicationDevice();
+			}
+		} else {
+			am.setSpeakerphoneOn(on);
 		}
 	}
 
@@ -577,7 +622,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			item.setChecked(usingSpeaker);
 			AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 			am.setMode(usingSpeaker ? AudioManager.MODE_IN_COMMUNICATION : AudioManager.MODE_NORMAL);
-			am.setSpeakerphoneOn(usingSpeaker);
+			setSpeakerphoneOn(am, usingSpeaker);
 		}
         return false;
     }

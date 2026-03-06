@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
@@ -72,6 +73,9 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     protected void onCreate(Bundle savedInstanceState) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             EdgeToEdge.enable(this);
+            // Explicitly set light icons for the black status bar when edge-to-edge is enabled
+            new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(true);
         }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sync);
@@ -286,14 +290,14 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
     private void handleBarcode(Barcode barcode) {
         String contents = barcode.getDisplayValue();
         if (contents == null) return;
-        
+
         scanning = false;
         runOnUiThread(() -> {
             ipView.setText(contents);
             previewView.setVisibility(View.INVISIBLE);
-            
+
             sendRegistrationMessage(contents);
-            
+
             ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
             cameraProviderFuture.addListener(() -> {
                 try {
@@ -311,8 +315,8 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
         if (ourIpAddress == null) return;
         new Thread(() -> {
             try (DatagramSocket socket = new DatagramSocket()) {
-                // Registration must be sent to port 11007 as a UTF-8 encoded string containing 
-                // only the Android device's IPv4 address (no prefix or whitespace), as expected 
+                // Registration must be sent to port 11007 as a UTF-8 encoded string containing
+                // only the Android device's IPv4 address (no prefix or whitespace), as expected
                 // by the desktop application.
                 byte[] data = ourIpAddress.getBytes(StandardCharsets.UTF_8);
                 DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(desktopIpAddress), 11007);

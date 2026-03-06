@@ -42,6 +42,7 @@ public class PlayButton extends CustomButton {
     @Override
     public void onDraw(Canvas canvas) {
         //super.onDraw(canvas);
+        arrow.reset();
         int w = getWidth();
         int h = getHeight();
         float moveWhenPushed = 1.0f;
