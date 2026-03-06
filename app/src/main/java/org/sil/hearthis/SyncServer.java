@@ -11,7 +11,7 @@ import fi.iki.elonen.NanoHTTPD;
  */
 public class SyncServer extends NanoHTTPD {
     private static final String TAG = "SyncServer";
-    SyncService _parent;
+    final SyncService _parent;
     static final int SERVER_PORT = 8087;
 
     private final DeviceNameHandler deviceNameHandler;

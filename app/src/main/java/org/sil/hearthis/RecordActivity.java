@@ -68,7 +68,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 	// Back to instance variables to avoid resource contention, but using safe lifecycle management.
 	private MediaRecorder recorder = null;
 	private WavAudioRecorder waveRecorder = null;
-	public static boolean useWaveRecorder = true;
+	public static final boolean useWaveRecorder = true;
 	LevelMeterView levelMeter;
 
 	NextButton nextButton;

@@ -22,8 +22,8 @@ public class TestScriptProvider implements IScriptProvider {
         return 0;
     }
 
-    Map<Integer, Integer> BookTranslatedLineCounts = new HashMap<>();
-    Map<Integer, Integer> BookScriptLineCounts = new HashMap<>();
+    final Map<Integer, Integer> BookTranslatedLineCounts = new HashMap<>();
+    final Map<Integer, Integer> BookScriptLineCounts = new HashMap<>();
 
     public void setTranslatedBookCount(int bookNumber, int val) {
         BookTranslatedLineCounts.put(bookNumber, val);

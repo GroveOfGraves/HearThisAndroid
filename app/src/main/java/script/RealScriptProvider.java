@@ -26,9 +26,9 @@ import javax.xml.transform.stream.StreamResult;
 public class RealScriptProvider implements IScriptProvider {
     private static final String TAG = "RealScriptProvider";
 
-	String _path;
-	List<BookData> Books = new ArrayList<>();
-    public static String infoFileName = "info.xml";
+    final String _path;
+    final List<BookData> Books = new ArrayList<>();
+    public static final String infoFileName = "info.xml";
     FileSystem getFileSystem() {
         return ServiceLocator.getServiceLocator().getFileSystem();
     }
@@ -248,7 +248,7 @@ public class RealScriptProvider implements IScriptProvider {
     }
 	class BookData {
 		public String name;
-		public List<ChapterData> chapters = new ArrayList<>();
+		public final List<ChapterData> chapters = new ArrayList<>();
 	}
 	public RealScriptProvider(String path) {
 		_path = path;

@@ -33,7 +33,7 @@ public class RealScriptProviderTest {
 
     // Simulated info.txt indicating two books, Genesis and Exodus.
     // Genesis has three chapters of 2, 12, and 25 recordable segments, of which 1, 5, and 12 have been recorded.
-    String genEx = "Genesis;2:1,12:5,25:12\nExodus;3:0,10:5";
+    final String genEx = "Genesis;2:1,12:5,25:12\nExodus;3:0,10:5";
 
     @Test
     public void testGetScriptLineCount() {
@@ -95,7 +95,7 @@ public class RealScriptProviderTest {
         assertFalse(sp.hasRecording(39, 1, 2));
     }
 
-    String ex0 = """
+    final String ex0 = """
         <?xml version="1.0" encoding="utf-8"?>
         <ChapterInfo Number="0">
             <Source>

@@ -47,8 +47,8 @@ public class LevelMeterView extends View {
         }
     }
 
-    int ledCount = 20;
-    int gapFraction = 5; // Divide space per LED by this to get gap width
+    final int ledCount = 20;
+    final int gapFraction = 5; // Divide space per LED by this to get gap width
 
     @Override
     protected void onDraw(@NonNull Canvas canvas) {

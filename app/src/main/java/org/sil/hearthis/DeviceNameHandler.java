@@ -8,7 +8,7 @@ import fi.iki.elonen.NanoHTTPD.Response;
  * Handler responds to HTTP request by returning a string, the name of this device.
  */
 public class DeviceNameHandler {
-    SyncService _parent;
+    final SyncService _parent;
     public DeviceNameHandler(SyncService parent) {
         _parent = parent;
     }

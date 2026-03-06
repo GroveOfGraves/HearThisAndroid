@@ -33,11 +33,11 @@ public class NextButton extends CustomButton {
         disabledPaint.setColor(ContextCompat.getColor(context, R.color.audioButtonDisabledColor));
     }
 
-    Paint blueFillPaint;
-    Paint highlightBorderPaint;
-    Paint waitPaint;
-    Paint disabledPaint;
-    Paint playBorderPaint;
+    final Paint blueFillPaint;
+    final Paint highlightBorderPaint;
+    final Paint waitPaint;
+    final Paint disabledPaint;
+    final Paint playBorderPaint;
     private final Path arrow = new Path();
 
     @Override

@@ -18,7 +18,6 @@ import org.robolectric.annotation.Config;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -39,7 +38,7 @@ import fi.iki.elonen.NanoHTTPD.Response;
 public class AcceptFileHandlerTest {
 
     @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
+    public final TemporaryFolder tempFolder = new TemporaryFolder();
 
     private AcceptFileHandler handler;
     private File baseDir;

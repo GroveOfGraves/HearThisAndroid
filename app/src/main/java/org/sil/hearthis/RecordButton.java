@@ -26,10 +26,10 @@ public class RecordButton extends CustomButton {
         recordingPaint.setColor(ContextCompat.getColor(context, R.color.recordingColor));
     }
 
-    Paint blueFillPaint;
-    Paint highlightBorderPaint;
-    Paint waitPaint;
-    Paint recordingPaint;
+    final Paint blueFillPaint;
+    final Paint highlightBorderPaint;
+    final Paint waitPaint;
+    final Paint recordingPaint;
     private boolean waiting;
 
     public boolean getWaiting() { return waiting;}

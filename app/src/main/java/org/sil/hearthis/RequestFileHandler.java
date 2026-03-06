@@ -15,7 +15,7 @@ import fi.iki.elonen.NanoHTTPD.Response;
  */
 public class RequestFileHandler {
     private static final String TAG = "RequestFileHandler";
-    Context _parent;
+    final Context _parent;
     private IFileSentNotification listener;
 
     public RequestFileHandler(Context parent) {
