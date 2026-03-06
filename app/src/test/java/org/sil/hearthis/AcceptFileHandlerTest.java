@@ -34,7 +34,7 @@ import fi.iki.elonen.NanoHTTPD.Response;
  * without Mockito warnings or deprecated method implementations.
  */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35)
+@Config(sdk = 34)
 public class AcceptFileHandlerTest {
 
     @Rule

@@ -85,11 +85,12 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		EdgeToEdge.enable(this);
-		// Explicitly set dark icons for the white status bar when edge-to-edge is enabled
-		new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
-				.setAppearanceLightStatusBars(false);
-		
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			EdgeToEdge.enable(this);
+            // Explicitly set dark icons for the white status bar when edge-to-edge is enabled
+            new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(false);
+		}
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 			getWindow().getAttributes().layoutInDisplayCutoutMode =
 					WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
@@ -365,6 +366,7 @@ public class RecordActivity extends AppCompatActivity implements View.OnClickLis
 			}
 			// Do the initialization of the recorder in another thread so the main one
 			//  can color the button red until we really start recording.
+			// Wrap waveRecorder initialization logic in a background thread for smoother UI.
 			new Thread(this::startWaveRecorder).start();
 			return;
 		}

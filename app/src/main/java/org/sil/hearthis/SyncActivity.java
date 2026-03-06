@@ -71,10 +71,12 @@ public class SyncActivity extends AppCompatActivity implements AcceptNotificatio
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        EdgeToEdge.enable(this);
-        // Explicitly set light icons for the black status bar when edge-to-edge is enabled
-        new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
-                .setAppearanceLightStatusBars(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            EdgeToEdge.enable(this);
+            // Explicitly set light icons for the black status bar when edge-to-edge is enabled
+            new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+                    .setAppearanceLightStatusBars(true);
+        }
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sync);
 
