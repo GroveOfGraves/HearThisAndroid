@@ -5,7 +5,7 @@ Simple Scripture recording on Android Devices
 
 Synchronizes (over local WiFi) with HearThis for Windows. Can display, record and play back Scripture.
 
-#Building
+# Building
 The project targets Android SDK 36 (Android 16) to meet Google Play's current requirements. The simplest way to get started is to install the latest stable version of Android Studio and open this repository as the project — Android Studio will handle the rest automatically.
 
 > **Important:** use the latest stable version of Android Studio. As of development, this is **Android Studio Panda 2 | 2025.3.2**. Older versions may not recognise or be able to download the required Gradle version, causing the build to fail.
@@ -20,7 +20,7 @@ Build requirements:
 - **Java 17** — the project is compiled with Java 17 source and target compatibility; make sure the JDK in Android Studio is set to 17 or later
 - **Gradle 9.3.1** and **Android Gradle Plugin 9.1.0** — these are managed automatically by the Gradle wrapper; no manual installation is needed
 
-#Testing
+# Testing
 The automated test suite has been significantly expanded and all tests are expected to pass with the current configuration.
 
 **Unit tests** (no device or emulator required) live in `app/src/test/java/org/sil/hearthis/` and use JUnit 4 with Robolectric for any tests that need Android context. To run them in Android Studio, right-click the `org.sil.hearthis` package under that directory and choose *Run tests in 'org.sil.hearthis'*.
