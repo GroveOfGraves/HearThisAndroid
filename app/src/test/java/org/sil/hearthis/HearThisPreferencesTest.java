@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config;
  * Unit tests for preference persistence.
  */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35)
+@Config(sdk = 34)
 public class HearThisPreferencesTest {
 
     private Context context;
