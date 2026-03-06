@@ -57,13 +57,13 @@ public class RecordActivityTest {
         // Simpler info.txt: Just Matthew (index 0)
         String infoTxt = "Matthew;2:0\n"; // Matthew, 1 chapter (index 0), 2 lines
         
-        fakeFileSystem.SimulateFile(fakeFileSystem.getInfoTxtPath(), infoTxt);
+        fakeFileSystem.simulateFile(fakeFileSystem.getInfoTxtPath(), infoTxt);
         fakeFileSystem.SimulateDirectory(fakeFileSystem.getProjectDirectory());
         
         // Simulate the info.xml for Matthew Chapter 1
         String chapterInfoPath = "root/testProject/Matthew/0/info.xml";
         fakeFileSystem.SimulateDirectory("root/testProject/Matthew/0");
-        fakeFileSystem.SimulateFile(chapterInfoPath, 
+        fakeFileSystem.simulateFile(chapterInfoPath,
             "<ChapterInfo><Source>" +
             "<ScriptLine><Text>Matthew line 0</Text></ScriptLine>" +
             "<ScriptLine><Text>Matthew line 1</Text></ScriptLine>" +

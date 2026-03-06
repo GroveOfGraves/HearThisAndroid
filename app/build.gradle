@@ -29,6 +29,15 @@ android {
             includeAndroidResources = true
         }
     }
+
+    sourceSets {
+        test {
+            java.srcDirs += 'src/sharedTest/java'
+        }
+        androidTest {
+            java.srcDirs += 'src/sharedTest/java'
+        }
+    }
 }
 
 dependencies {

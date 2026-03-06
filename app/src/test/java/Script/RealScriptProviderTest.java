@@ -1,6 +1,7 @@
 package Script;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.sil.hearthis.ServiceLocator;
@@ -30,19 +31,9 @@ public class RealScriptProviderTest {
 
     }
 
-    @Test
-    public void testGetLine() throws Exception {
-
-    }
-
     // Simulated info.txt indicating two books, Genesis and Exodus.
     // Genesis has three chapters of 2, 12, and 25 recordable segments, of which 1, 5, and 12 have been recorded.
     String genEx = "Genesis;2:1,12:5,25:12\nExodus;3:0,10:5";
-
-    @Test
-    public void testGetChapter() throws Exception {
-
-    }
 
     @Test
     public void testGetScriptLineCount() throws Exception {
@@ -62,6 +53,46 @@ public class RealScriptProviderTest {
 
         ServiceLocator.getServiceLocator().setFileSystem(new FileSystem(fs));
         return new RealScriptProvider(fs.getProjectDirectory());
+    }
+
+    private void makeDefaultFs() {
+        fs = new TestFileSystem(); // has a default info.txt
+        ServiceLocator.getServiceLocator().setFileSystem(new FileSystem(fs));
+        fs.project = "test";
+        fs.simulateFile(fs.project + "/info.txt", fs.getDefaultInfoTxtContent());
+    }
+
+    @Test
+    public void getBasicDataFromInfoTxt() {
+        makeDefaultFs();
+        RealScriptProvider sp = new RealScriptProvider(fs.project);
+        ServiceLocator.getServiceLocator().setScriptProvider(sp);
+        Assert.assertEquals(0, sp.GetScriptLineCount(0));
+        Assert.assertEquals(38, sp.GetScriptLineCount(39));
+        Assert.assertEquals(12, sp.GetScriptLineCount(39, 1));
+    }
+
+    @Test
+    public void getBasicLineData() {
+        makeDefaultFs();
+        fs.MakeChapterContent("Matthew", 1, new String[]{"first line", "second line", "third line"}, null);
+        RealScriptProvider sp = new RealScriptProvider(fs.project);
+        ServiceLocator.getServiceLocator().setScriptProvider(sp);
+        Assert.assertEquals("first line", sp.GetLine(39, 1, 0).Text);
+        Assert.assertEquals("second line", sp.GetLine(39, 1, 1).Text);
+        Assert.assertEquals("third line", sp.GetLine(39, 1, 2).Text);
+    }
+
+    @Test
+    public void getRecordingExists() {
+        makeDefaultFs();
+        fs.MakeChapterContent("Matthew", 1, new String[]{"first line", "second line", "third line"},
+                new String[] {null, "second line", null});
+        RealScriptProvider sp = new RealScriptProvider(fs.project);
+        ServiceLocator.getServiceLocator().setScriptProvider(sp);
+        Assert.assertFalse(sp.hasRecording(39, 1, 0));
+        Assert.assertTrue(sp.hasRecording(39, 1, 1));
+        Assert.assertFalse(sp.hasRecording(39, 1, 2));
     }
 
     String ex0 = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
@@ -89,27 +120,6 @@ public class RealScriptProviderTest {
         assertEquals(5, sp.GetTranslatedLineCount(0, 1));
         assertEquals(0, sp.GetTranslatedLineCount(1, 0));
         assertEquals(12, sp.GetTranslatedLineCount(0, 2));
-
-    }
-
-    @Test
-    public void testGetTranslatedLineCount1() throws Exception {
-
-    }
-
-    @Test
-    public void testGetScriptLineCount1() throws Exception {
-
-    }
-
-    @Test
-    public void testLoadBook() throws Exception {
-
-    }
-
-    @Test
-    public void testGetEthnologueCode() throws Exception {
-
     }
 
     @Test
@@ -184,11 +194,6 @@ public class RealScriptProviderTest {
         Element line = findNthChild(recording, 0, 1, "ScriptLine");
         verifyChildContent(line, "LineNumber", "2");
         verifyChildContent(line, "Text", "New Introduction");
-    }
-
-    @Test
-    public void testGetRecordingFilePath() throws Exception {
-
     }
 
     // Read input as an XML document. Verify that getElementsByTagName(tag) yields exactly one element

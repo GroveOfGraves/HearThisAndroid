@@ -61,7 +61,7 @@ public class BookSelectionTest {
         for (int i = 0; i < 39; i++) infoTxtBuilder.append("Book").append(i).append(";\n");
         infoTxtBuilder.append(infoTxtContent);
 
-        fakeFileSystem.SimulateFile(fakeFileSystem.getInfoTxtPath(), infoTxtBuilder.toString());
+        fakeFileSystem.simulateFile(fakeFileSystem.getInfoTxtPath(), infoTxtBuilder.toString());
         fakeFileSystem.SimulateDirectory(fakeFileSystem.getProjectDirectory());
         
         ServiceLocator.getServiceLocator().externalFilesDirectory = fakeFileSystem.externalFilesDirectory;

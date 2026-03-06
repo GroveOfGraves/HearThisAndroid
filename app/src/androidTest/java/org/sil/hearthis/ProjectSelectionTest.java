@@ -68,7 +68,7 @@ public class ProjectSelectionTest {
     public void selectingProject_navigatesToChooseBook() {
         // Setup one project with a valid info.txt so it can load books
         fakeFileSystem.SimulateDirectory("root/ProjectA");
-        fakeFileSystem.SimulateFile("root/ProjectA/info.txt", "Matthew;10:0\n");
+        fakeFileSystem.simulateFile("root/ProjectA/info.txt", "Matthew;10:0\n");
         
         try (ActivityScenario<ChooseProjectActivity> ignored = ActivityScenario.launch(ChooseProjectActivity.class)) {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
@@ -85,9 +85,9 @@ public class ProjectSelectionTest {
     public void selectingProject_withSavedLocation_navigatesToRecord() {
         // Setup a project with a saved location in status.txt
         fakeFileSystem.SimulateDirectory("root/ProjectA");
-        fakeFileSystem.SimulateFile("root/ProjectA/info.txt", "Matthew;10:0\n");
+        fakeFileSystem.simulateFile("root/ProjectA/info.txt", "Matthew;10:0\n");
         // Status: Book 0, Chapter 0, Line 5
-        fakeFileSystem.SimulateFile("root/ProjectA/status.txt", "0;0;5");
+        fakeFileSystem.simulateFile("root/ProjectA/status.txt", "0;0;5");
         
         try (ActivityScenario<ChooseProjectActivity> ignored = ActivityScenario.launch(ChooseProjectActivity.class)) {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
