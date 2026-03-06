@@ -13,9 +13,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
-import Script.BookInfo;
 import script.BookInfo;
-import script.IScriptProvider;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 35)

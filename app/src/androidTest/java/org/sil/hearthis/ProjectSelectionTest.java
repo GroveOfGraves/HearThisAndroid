@@ -22,8 +22,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import Script.FileSystem;
-import Script.TestFileSystem;
+import script.FileSystem;
+import script.TestFileSystem;
 
 /**
  * Tests the ChooseProjectActivity logic for listing and selecting projects.
