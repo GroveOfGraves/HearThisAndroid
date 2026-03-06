@@ -1,5 +1,6 @@
 package script;
 
+import android.os.Build;
 import android.util.Log;
 
 import org.w3c.dom.Document;
@@ -121,12 +122,14 @@ public class TestFileSystem implements IFileSystem {
     public void simulateFile(String path, String content) {
         files.put(path, content);
     }
+    @SuppressWarnings("unused")
+    // Method is used in another file
     public void SimulateDirectory(String path) {
         directories.add(path);
     }
 
     @Override
-    public InputStream ReadFile(String path) throws FileNotFoundException {
+    public InputStream ReadFile(String path) {
         String content = files.get(path);
         // This is not supported by the minimum Android version I'm targeting,
         // but this code only has to work for testing.
@@ -165,12 +168,11 @@ public class TestFileSystem implements IFileSystem {
         return result;
     }
 
-    Element MakeElement(Document doc, Element parent, String name, String content) {
+    void MakeElement(Document doc, Element parent, String name, String content) {
         Element result = doc.createElement(name);
         parent.appendChild(result);
         result.setTextContent(content);
-        return result;
-    }
+        }
 
     // Make a simulated info.txt file for the specified chapter. Contents are the specified lines.
     // It also has recording elements for those recordingTexts which are non-null. It is OK to have
@@ -234,7 +236,14 @@ public class TestFileSystem implements IFileSystem {
         @Override
         public void close() throws IOException {
             super.close(); // officially does nothing, but for consistency.
-            parent.WriteStreamClosed(path, this.toString(StandardCharsets.UTF_8));
+            String content;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                content = this.toString(StandardCharsets.UTF_8);
+            } else {
+                //noinspection CharsetObjectCanBeUsed
+                content = this.toString("UTF-8");
+            }
+            parent.WriteStreamClosed(path, content);
         }
     }
 }
