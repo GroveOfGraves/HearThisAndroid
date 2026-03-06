@@ -26,6 +26,10 @@
         <item name="colorPrimary">@android:color/black</item>
         <item name="colorPrimaryDark">@android:color/black</item>
 
+        <!-- Status Bar for most screens (White with dark icons) -->
+        <item name="android:statusBarColor">@android:color/white</item>
+        <item name="android:windowLightStatusBar">false</item>
+
         <!-- Global Action Bar styling -->
         <item name="actionBarStyle">@style/GlobalActionBar</item>
     </style>
@@ -40,9 +44,11 @@
         <item name="android:textColor">@android:color/white</item>
     </style>
 
-    <!-- Theme for SyncActivity with white background -->
+    <!-- Theme for SyncActivity with white background and black status bar -->
     <style name="SyncTheme" parent="AppTheme">
         <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <color name="mainBackground">#404040</color>
